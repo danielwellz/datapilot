@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 from pydantic import ValidationError
 
@@ -124,6 +126,13 @@ def test_settings_errors_never_print_the_rejected_values(overrides: dict[str, st
 
     assert "SECRET-VALUE" not in str(caught.value)
     assert "input_value" not in str(caught.value)
+
+
+def test_token_lifetimes_are_exposed_as_durations() -> None:
+    settings = make_test_settings(jwt_access_ttl_minutes=5, jwt_refresh_ttl_days=2)
+
+    assert settings.access_token_ttl == timedelta(minutes=5)
+    assert settings.refresh_token_ttl == timedelta(days=2)
 
 
 def test_production_settings_accept_strong_secrets() -> None:

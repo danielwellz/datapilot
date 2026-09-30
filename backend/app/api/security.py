@@ -7,7 +7,6 @@ token failure in the standard error envelope instead of the extension's own.
 
 import uuid
 from collections.abc import Callable
-from datetime import timedelta
 from http import HTTPStatus
 from typing import Any, cast
 
@@ -37,6 +36,7 @@ REFRESH_AUTH: dict[str, list[str]] = {"refreshCookie": [], "csrfHeader": []}
 # Refresh-token claim naming the family (one per login) the token belongs to.
 FAMILY_CLAIM = "fam"
 
+# Read on every refresh rather than fixed in the store, so tests can shorten it.
 REFRESH_REUSE_GRACE_SECONDS = DEFAULT_REUSE_GRACE_SECONDS
 
 
@@ -74,10 +74,9 @@ def require_refresh_token[**P, R](view: Callable[P, R]) -> Callable[P, R]:
 
 
 def refresh_token_store() -> RefreshTokenStore:
-    settings = current_settings()
     return RefreshTokenStore(
         get_redis(),
-        family_ttl_seconds=int(timedelta(days=settings.jwt_refresh_ttl_days).total_seconds()),
+        family_ttl_seconds=int(current_settings().refresh_token_ttl.total_seconds()),
         reuse_grace_seconds=REFRESH_REUSE_GRACE_SECONDS,
     )
 
@@ -110,7 +109,7 @@ def start_session(user: User, family: str | None = None) -> SessionOut:
     settings = current_settings()
     # The cookie lives exactly as long as the token inside it. Left alone, the
     # extension gives persistent cookies a one-year Max-Age.
-    cookie_max_age = int(timedelta(days=settings.jwt_refresh_ttl_days).total_seconds())
+    cookie_max_age = int(settings.refresh_token_ttl.total_seconds())
 
     @after_this_request
     def _set_refresh_cookie(response: Response) -> Response:
@@ -122,7 +121,7 @@ def start_session(user: User, family: str | None = None) -> SessionOut:
 
     return SessionOut(
         access_token=access_token,
-        expires_in=settings.jwt_access_ttl_minutes * 60,
+        expires_in=int(settings.access_token_ttl.total_seconds()),
         user=UserOut.model_validate(user),
     )
 

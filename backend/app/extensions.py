@@ -1,6 +1,6 @@
 """Flask extensions, created once and bound to each app in ``init_extensions``."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 from flask import Flask, current_app
@@ -72,8 +72,8 @@ def init_extensions(app: Flask, settings: Settings) -> None:
         # Access tokens travel in the Authorization header, refresh tokens in
         # a cookie; each endpoint names the one location it accepts.
         JWT_TOKEN_LOCATION=["headers", "cookies"],
-        JWT_ACCESS_TOKEN_EXPIRES=timedelta(minutes=settings.jwt_access_ttl_minutes),
-        JWT_REFRESH_TOKEN_EXPIRES=timedelta(days=settings.jwt_refresh_ttl_days),
+        JWT_ACCESS_TOKEN_EXPIRES=settings.access_token_ttl,
+        JWT_REFRESH_TOKEN_EXPIRES=settings.refresh_token_ttl,
         JWT_REFRESH_COOKIE_PATH=REFRESH_COOKIE_PATH,
         # The CSRF cookie must be readable by the single-page app, which runs
         # at "/": document.cookie only lists cookies whose path covers the page.
@@ -81,8 +81,8 @@ def init_extensions(app: Flask, settings: Settings) -> None:
         JWT_COOKIE_SAMESITE="Strict",
         JWT_COOKIE_SECURE=settings.is_production,
         JWT_COOKIE_CSRF_PROTECT=True,
-        # Persistent cookies (Max-Age = refresh TTL): staying logged in must
-        # survive a browser restart.
+        # Persistent cookies, so staying logged in survives a browser restart.
+        # start_session sets their Max-Age to the refresh token lifetime.
         JWT_SESSION_COOKIE=False,
     )
     db.init_app(app)

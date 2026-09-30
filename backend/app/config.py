@@ -1,5 +1,6 @@
 """Application settings, loaded from environment variables."""
 
+from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Self
@@ -107,6 +108,14 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @property
+    def access_token_ttl(self) -> timedelta:
+        return timedelta(minutes=self.jwt_access_ttl_minutes)
+
+    @property
+    def refresh_token_ttl(self) -> timedelta:
+        return timedelta(days=self.jwt_refresh_ttl_days)
 
 
 @lru_cache(maxsize=1)

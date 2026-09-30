@@ -81,7 +81,6 @@ def test_login_sets_a_script_readable_csrf_cookie_for_the_whole_site(client: Fla
     assert csrf.value not in response.get_data(as_text=True)
 
 
-@pytest.mark.usefixtures("db_session")
 def test_login_cookies_are_secure_in_production(make_app: AppFactory) -> None:
     strong = "p" * 40
     client = make_app(app_env="production", secret_key=strong, jwt_secret_key=strong).test_client()
