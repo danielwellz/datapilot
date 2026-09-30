@@ -1,0 +1,35 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Node / Angular
+node_modules/
+.angular/
+frontend/dist/
+coverage/
+npm-debug.log*
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
