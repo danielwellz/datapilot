@@ -1,7 +1,8 @@
 """Authentication endpoints: registration, login, token refresh, logout and the current user."""
 
 from flask import Blueprint, request
-from flask_jwt_extended import get_jwt
+from flask import Response as FlaskResponse
+from flask_jwt_extended import get_jwt, unset_jwt_cookies
 from spectree import Response
 
 from app.api.rate_limits import RateLimitRule, enforce_rate_limit
@@ -119,6 +120,26 @@ def refresh() -> SessionOut:
     claims = get_jwt()
     refresh_token_store().rotate(claims["jti"], claims[FAMILY_CLAIM], claims["exp"])
     return start_session(current_user(), family=claims[FAMILY_CLAIM])
+
+
+@auth.post("/logout")
+@spec.validate(
+    resp=Response(HTTP_204=None, HTTP_401=ErrorOut, HTTP_403=ErrorOut),
+    tags=["auth"],
+    security=REFRESH_AUTH,
+)
+@require_refresh_token
+def logout() -> FlaskResponse:
+    """Log out: revoke the refresh token and clear both cookies.
+
+    The access token is not revoked; it expires within 15 minutes and the
+    client discards it. Requires the `X-CSRF-TOKEN` header (403 without it).
+    """
+    claims = get_jwt()
+    refresh_token_store().revoke(claims["jti"], claims["exp"])
+    response = FlaskResponse(status=204)
+    unset_jwt_cookies(response)
+    return response
 
 
 @auth.get("/me")
