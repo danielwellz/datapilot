@@ -2,10 +2,13 @@
 
 from flask import Flask
 
+from app.api import register_blueprints
 from app.config import SETTINGS_EXTENSION_KEY, Settings, get_settings
 from app.errors import register_error_handlers
 from app.extensions import init_extensions
 from app.logging import configure_logging, init_request_logging
+
+_MAX_REQUEST_BODY_BYTES = 1024 * 1024
 
 
 def create_app(settings: Settings | None = None) -> Flask:
@@ -24,6 +27,8 @@ def create_app(settings: Settings | None = None) -> Flask:
     app.config.update(
         SECRET_KEY=settings.secret_key.get_secret_value(),
         TESTING=settings.app_env == "test",
+        # Bodies are small JSON documents; anything larger is refused with 413.
+        MAX_CONTENT_LENGTH=_MAX_REQUEST_BODY_BYTES,
     )
     app.extensions[SETTINGS_EXTENSION_KEY] = settings
 
@@ -31,4 +36,5 @@ def create_app(settings: Settings | None = None) -> Flask:
     init_request_logging(app)
     register_error_handlers(app)
     init_extensions(app, settings)
+    register_blueprints(app)
     return app

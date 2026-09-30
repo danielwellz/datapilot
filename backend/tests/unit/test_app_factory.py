@@ -59,4 +59,4 @@ def test_create_app_reads_environment_when_no_settings_are_injected(
 def test_create_app_does_not_serve_static_files(settings: Settings) -> None:
     app = create_app(settings)
 
-    assert [rule.rule for rule in app.url_map.iter_rules()] == []
+    assert "static" not in app.view_functions
