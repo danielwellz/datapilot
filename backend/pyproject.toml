@@ -57,8 +57,9 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# Plain assert is how pytest expresses expectations.
-"tests/**/*.py" = ["S101"]
+# Plain assert is how pytest expresses expectations, and tests use fixed,
+# fake secrets on purpose.
+"tests/**/*.py" = ["S101", "S105", "S106"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "tests"]
