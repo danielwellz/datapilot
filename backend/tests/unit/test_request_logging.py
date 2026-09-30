@@ -1,9 +1,6 @@
-import io
-import json
 import logging
 import uuid
 from collections.abc import Iterator
-from typing import Any
 
 import pytest
 from flask import Flask
@@ -11,7 +8,8 @@ from flask.testing import FlaskClient
 
 from app import create_app
 from app.config import Settings
-from app.logging import REQUEST_ID_HEADER, build_log_handler, configure_logging
+from app.logging import REQUEST_ID_HEADER, configure_logging
+from tests.logs import LogCapture
 
 app_logger = logging.getLogger("app.tests")
 
@@ -26,20 +24,6 @@ def logging_app(settings: Settings) -> Flask:
         return "pong"
 
     return app
-
-
-def records_from(stream: io.StringIO) -> list[dict[str, Any]]:
-    return [json.loads(line) for line in stream.getvalue().splitlines()]
-
-
-@pytest.fixture
-def captured_logs() -> Iterator[io.StringIO]:
-    stream = io.StringIO()
-    handler = build_log_handler(stream)
-    root = logging.getLogger()
-    root.addHandler(handler)
-    yield stream
-    root.removeHandler(handler)
 
 
 @pytest.fixture
@@ -81,11 +65,11 @@ def test_each_request_gets_its_own_request_id(logging_client: FlaskClient) -> No
 
 
 def test_access_log_has_one_json_line_per_request_with_timing(
-    logging_client: FlaskClient, captured_logs: io.StringIO
+    logging_client: FlaskClient, captured_logs: LogCapture
 ) -> None:
     response = logging_client.get("/ping?token=secret", headers={REQUEST_ID_HEADER: "req-1"})
 
-    access = [r for r in records_from(captured_logs) if r["logger"] == "app.access"]
+    access = captured_logs.records("app.access")
     assert len(access) == 1
     line = access[0]
     assert line["message"] == "request completed"
@@ -97,23 +81,23 @@ def test_access_log_has_one_json_line_per_request_with_timing(
     assert line["duration_ms"] >= 0
     assert line["request_id"] == "req-1"
     assert "timestamp" in line
-    assert "secret" not in captured_logs.getvalue()
+    assert "secret" not in captured_logs.text
 
 
 def test_log_lines_written_while_handling_a_request_carry_its_id(
-    logging_client: FlaskClient, captured_logs: io.StringIO
+    logging_client: FlaskClient, captured_logs: LogCapture
 ) -> None:
     logging_client.get("/ping", headers={REQUEST_ID_HEADER: "req-2"})
 
-    handler_line = next(r for r in records_from(captured_logs) if r["logger"] == "app.tests")
+    (handler_line,) = captured_logs.records("app.tests")
     assert handler_line["message"] == "handling ping"
     assert handler_line["request_id"] == "req-2"
 
 
-def test_log_lines_outside_a_request_have_no_request_id(captured_logs: io.StringIO) -> None:
+def test_log_lines_outside_a_request_have_no_request_id(captured_logs: LogCapture) -> None:
     app_logger.warning("background work")
 
-    (line,) = records_from(captured_logs)
+    (line,) = captured_logs.records("app.tests")
     assert line["request_id"] is None
 
 

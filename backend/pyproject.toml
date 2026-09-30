@@ -60,6 +60,8 @@ select = [
 # Plain assert is how pytest expresses expectations, and tests use fixed,
 # fake secrets on purpose.
 "tests/**/*.py" = ["S101", "S105", "S106"]
+# Error classes are named after the HTTP outcome they produce (`raise NotFound()`).
+"app/errors.py" = ["N818"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "tests"]

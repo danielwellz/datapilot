@@ -3,6 +3,7 @@
 from flask import Flask
 
 from app.config import SETTINGS_EXTENSION_KEY, Settings, get_settings
+from app.errors import register_error_handlers
 from app.logging import configure_logging, init_request_logging
 
 
@@ -27,4 +28,5 @@ def create_app(settings: Settings | None = None) -> Flask:
 
     # Registered first so every later hook and handler can use the request id.
     init_request_logging(app)
+    register_error_handlers(app)
     return app

@@ -6,6 +6,7 @@ from flask.testing import FlaskClient
 
 from app import create_app
 from app.config import Settings
+from tests.logs import LogCapture, capture_logs
 from tests.settings import make_test_settings
 
 
@@ -24,3 +25,9 @@ def app(settings: Settings) -> Iterator[Flask]:
 @pytest.fixture
 def client(app: Flask) -> FlaskClient:
     return app.test_client()
+
+
+@pytest.fixture
+def captured_logs() -> Iterator[LogCapture]:
+    with capture_logs() as capture:
+        yield capture
