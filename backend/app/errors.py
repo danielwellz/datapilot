@@ -162,18 +162,16 @@ def error_response(
 
 def register_error_handlers(app: Flask) -> None:
     """Install the handlers; Flask picks the most specific one for each exception."""
+    # A raw pydantic ValidationError deliberately has no handler of its own:
+    # client input is converted to ValidationFailed (422) where it is parsed,
+    # so one that escapes from our code is a server bug and becomes a 500.
     app.register_error_handler(AppError, _handle_app_error)
-    app.register_error_handler(ValidationError, _handle_validation_error)
     app.register_error_handler(HTTPException, _handle_http_exception)
     app.register_error_handler(Exception, _handle_unexpected_error)
 
 
 def _handle_app_error(error: AppError) -> Response:
     return error_response(error.status, error.code, error.message, error.details, error.headers)
-
-
-def _handle_validation_error(error: ValidationError) -> Response:
-    return _handle_app_error(ValidationFailed.from_pydantic(error))
 
 
 def _handle_http_exception(error: HTTPException) -> Response:

@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 from flask import Flask, abort
 from flask.testing import FlaskClient
-from pydantic import BaseModel, SecretStr
+from pydantic import BaseModel, SecretStr, ValidationError
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from app import create_app
@@ -30,6 +30,8 @@ class Credentials(BaseModel):
     age: int
 
 
+INVALID_CREDENTIALS = {"email": "a@b.dev", "password": "hunter2", "age": "old"}
+
 RAISERS: dict[str, AppError] = {
     "bad-request": BadRequest(),
     "unauthorized": Unauthorized(),
@@ -53,7 +55,15 @@ def error_app(settings: Settings) -> Flask:
 
     @app.post("/pydantic")
     def raise_pydantic_error() -> str:
-        Credentials.model_validate({"email": "a@b.dev", "password": "hunter2", "age": "old"})
+        Credentials.model_validate(INVALID_CREDENTIALS)
+        return "unreachable"
+
+    @app.post("/client-input")
+    def raise_converted_pydantic_error() -> str:
+        try:
+            Credentials.model_validate(INVALID_CREDENTIALS)
+        except ValidationError as error:
+            raise ValidationFailed.from_pydantic(error) from error
         return "unreachable"
 
     @app.get("/crash")
@@ -136,10 +146,10 @@ def test_request_id_in_error_body_echoes_the_incoming_header(error_client: Flask
     assert error_of(response)["request_id"] == "trace-123"
 
 
-def test_pydantic_validation_error_renders_422_without_echoing_input(
+def test_converted_pydantic_error_renders_422_without_echoing_input(
     error_client: FlaskClient,
 ) -> None:
-    response = error_client.post("/pydantic")
+    response = error_client.post("/client-input")
 
     assert response.status_code == 422
     error = error_of(response)
@@ -152,6 +162,31 @@ def test_pydantic_validation_error_renders_422_without_echoing_input(
         }
     ]
     assert "old" not in response.get_data(as_text=True)
+
+
+def test_raw_pydantic_error_from_server_code_renders_generic_500(
+    error_client: FlaskClient,
+) -> None:
+    response = error_client.post("/pydantic")
+
+    assert response.status_code == 500
+    error = error_of(response)
+    assert error["code"] == "internal_error"
+    assert error["details"] == []
+    body = response.get_data(as_text=True)
+    assert "hunter2" not in body
+    assert "int_parsing" not in body
+
+
+def test_raw_pydantic_error_from_server_code_is_logged_as_a_server_error(
+    error_client: FlaskClient, captured_logs: LogCapture
+) -> None:
+    error_client.post("/pydantic", headers={REQUEST_ID_HEADER: "bug-1"})
+
+    (line,) = captured_logs.records("app.errors")
+    assert line["level"] == "ERROR"
+    assert line["request_id"] == "bug-1"
+    assert "ValidationError" in line["exc_info"]
 
 
 def test_unknown_route_renders_json_404(client: FlaskClient) -> None:
