@@ -26,6 +26,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.9",
+    "types-flask-migrate>=4.1.0.20260508",
 ]
 
 # An application, not a library: uv manages the environment but does not
@@ -69,7 +70,7 @@ known-first-party = ["app", "tests"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["app", "tests"]
+files = ["app", "migrations", "tests"]
 plugins = ["pydantic.mypy"]
 warn_unreachable = true
 
