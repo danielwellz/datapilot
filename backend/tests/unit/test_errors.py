@@ -17,6 +17,7 @@ from app.errors import (
     RateLimited,
     ServiceUnavailable,
     Unauthorized,
+    UnsupportedMediaType,
     ValidationFailed,
 )
 from app.logging import REQUEST_ID_HEADER
@@ -35,6 +36,7 @@ RAISERS: dict[str, AppError] = {
     "forbidden": Forbidden(),
     "not-found": NotFound("Order 42 does not exist."),
     "conflict": Conflict(details=[{"field": "email", "reason": "taken"}]),
+    "unsupported-media-type": UnsupportedMediaType(),
     "validation-failed": ValidationFailed(),
     "rate-limited": RateLimited(retry_after_seconds=30),
     "service-unavailable": ServiceUnavailable(),
@@ -93,6 +95,7 @@ def error_of(response: Any) -> dict[str, Any]:
         ("forbidden", 403, "forbidden"),
         ("not-found", 404, "not_found"),
         ("conflict", 409, "conflict"),
+        ("unsupported-media-type", 415, "unsupported_media_type"),
         ("validation-failed", 422, "validation_failed"),
         ("rate-limited", 429, "rate_limited"),
         ("service-unavailable", 503, "service_unavailable"),

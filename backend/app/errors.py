@@ -91,6 +91,12 @@ class Conflict(AppError):
     default_message = "The request conflicts with the current state of the resource."
 
 
+class UnsupportedMediaType(AppError):
+    status = HTTPStatus.UNSUPPORTED_MEDIA_TYPE
+    code = "unsupported_media_type"
+    default_message = "The request body is in an unsupported format."
+
+
 class ValidationFailed(AppError):
     status = HTTPStatus.UNPROCESSABLE_ENTITY
     code = "validation_failed"

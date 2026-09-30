@@ -6,10 +6,10 @@ the app factory registers it on every app it builds.
 """
 
 from flask import Blueprint, Flask, request
-from werkzeug.exceptions import BadRequest, UnsupportedMediaType
 
 from app.api.docs import docs
 from app.api.system import system
+from app.errors import BadRequest, UnsupportedMediaType
 
 _METHODS_WITH_BODY = frozenset({"POST", "PUT", "PATCH"})
 
