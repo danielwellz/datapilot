@@ -15,6 +15,7 @@ dependencies = [
     "pydantic-settings>=2.15.0",
     "python-json-logger>=4.2.0",
     "redis>=8.1.0",
+    "spectree[flask]>=3.0.0",
     "sqlalchemy>=2.1.1",
 ]
 
@@ -26,6 +27,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.9",
+    "types-flask-migrate>=4.1.0.20260508",
 ]
 
 # An application, not a library: uv manages the environment but does not
@@ -57,8 +59,11 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# Plain assert is how pytest expresses expectations.
-"tests/**/*.py" = ["S101"]
+# Plain assert is how pytest expresses expectations, and tests use fixed,
+# fake secrets on purpose.
+"tests/**/*.py" = ["S101", "S105", "S106"]
+# Error classes are named after the HTTP outcome they produce (`raise NotFound()`).
+"app/errors.py" = ["N818"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "tests"]
@@ -66,7 +71,7 @@ known-first-party = ["app", "tests"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["app", "tests"]
+files = ["app", "migrations", "tests"]
 plugins = ["pydantic.mypy"]
 warn_unreachable = true
 

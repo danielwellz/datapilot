@@ -54,10 +54,11 @@ be-typecheck: ## Type-check the backend with mypy --strict
 # --- Database -------------------------------------------------------------
 
 db-migrate: ## Autogenerate a migration: make db-migrate m="message"
-	@echo "db-migrate is available from Stage 1 (Flask-Migrate setup)."
+	@test -n "$(m)" || { echo 'Usage: make db-migrate m="describe the change"'; exit 1; }
+	cd $(BACKEND) && uv run flask --app app db migrate -m "$(m)"
 
 db-upgrade: ## Apply migrations to the development database
-	@echo "db-upgrade is available from Stage 1 (Flask-Migrate setup)."
+	cd $(BACKEND) && uv run flask --app app db upgrade
 
 seed: ## Load sales data: make seed scale=small|full
 	@echo "seed is available from Stage 3 (sales data model and seed)."
