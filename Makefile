@@ -3,7 +3,6 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 BACKEND := backend
-UV := uv run --project $(BACKEND)
 # Flask's default port 5000 is taken by AirPlay Receiver on macOS.
 FLASK_PORT := 5001
 
@@ -85,7 +84,7 @@ fe-build: ## Build the frontend for production
 # --- Workflow -------------------------------------------------------------
 
 hooks: ## Install the git pre-commit hook
-	$(UV) pre-commit install --hook-type pre-commit
+	cd $(BACKEND) && uv run pre-commit install --hook-type pre-commit
 
 check: be-lint be-typecheck be-test ## Run every lint, type check and test suite
 
