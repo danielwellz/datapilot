@@ -3,6 +3,7 @@
 from flask import Flask
 
 from app.api import register_blueprints
+from app.cli import register_cli
 from app.config import SETTINGS_EXTENSION_KEY, Settings, get_settings
 from app.errors import register_error_handlers
 from app.extensions import init_extensions
@@ -37,4 +38,5 @@ def create_app(settings: Settings | None = None) -> Flask:
     register_error_handlers(app)
     init_extensions(app, settings)
     register_blueprints(app)
+    register_cli(app)
     return app
