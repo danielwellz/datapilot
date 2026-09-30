@@ -1,5 +1,6 @@
 """Flask extensions, created once and bound to each app in ``init_extensions``."""
 
+from datetime import datetime
 from pathlib import Path
 
 from flask import Flask, current_app
@@ -7,8 +8,8 @@ from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from redis import Redis
-from sqlalchemy import MetaData
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import DateTime, MetaData
+from sqlalchemy.orm import DeclarativeBase, registry
 
 from app.config import Settings
 
@@ -25,6 +26,9 @@ NAMING_CONVENTION = {
 # Absolute, so migrations are found whatever the working directory is.
 MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "migrations"
 
+# The refresh cookie is only sent to the endpoints that consume it.
+REFRESH_COOKIE_PATH = "/api/auth"
+
 _REDIS_EXTENSION_KEY = "datapilot.redis"
 # Fail fast when Redis is unreachable instead of holding a worker for the
 # library's default of no timeout at all.
@@ -33,7 +37,21 @@ _DATABASE_CONNECT_TIMEOUT_SECONDS = 5
 
 
 class Base(DeclarativeBase):
-    metadata = MetaData(naming_convention=NAMING_CONVENTION)
+    """Declarative base of every model.
+
+    Models subclass this rather than ``db.Model``: they share its metadata, so
+    Flask-SQLAlchemy and Alembic see them all the same, and mypy can type
+    them, which it cannot do for the dynamically built ``db.Model``.
+    """
+
+    # Set through the registry rather than as class attributes, because
+    # Flask-SQLAlchemy subclasses this base to build db.Model.
+    registry = registry(
+        metadata=MetaData(naming_convention=NAMING_CONVENTION),
+        # Every timestamp is an instant (timestamptz); a naive datetime cannot
+        # be compared or serialized as UTC without guessing its zone.
+        type_annotation_map={datetime: DateTime(timezone=True)},
+    )
 
 
 db = SQLAlchemy(model_class=Base)
@@ -51,6 +69,21 @@ def init_extensions(app: Flask, settings: Settings) -> None:
             "connect_args": {"connect_timeout": _DATABASE_CONNECT_TIMEOUT_SECONDS},
         },
         JWT_SECRET_KEY=settings.jwt_secret_key.get_secret_value(),
+        # Access tokens travel in the Authorization header, refresh tokens in
+        # a cookie; each endpoint names the one location it accepts.
+        JWT_TOKEN_LOCATION=["headers", "cookies"],
+        JWT_ACCESS_TOKEN_EXPIRES=settings.access_token_ttl,
+        JWT_REFRESH_TOKEN_EXPIRES=settings.refresh_token_ttl,
+        JWT_REFRESH_COOKIE_PATH=REFRESH_COOKIE_PATH,
+        # The CSRF cookie must be readable by the single-page app, which runs
+        # at "/": document.cookie only lists cookies whose path covers the page.
+        JWT_REFRESH_CSRF_COOKIE_PATH="/",
+        JWT_COOKIE_SAMESITE="Strict",
+        JWT_COOKIE_SECURE=settings.is_production,
+        JWT_COOKIE_CSRF_PROTECT=True,
+        # Persistent cookies, so staying logged in survives a browser restart.
+        # start_session sets their Max-Age to the refresh token lifetime.
+        JWT_SESSION_COOKIE=False,
     )
     db.init_app(app)
     migrate.init_app(app, db, directory=str(MIGRATIONS_DIR), compare_type=True)

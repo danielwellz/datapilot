@@ -2,7 +2,11 @@
 
 from flask import Flask
 
+# Imported for its side effect: every model registers its table on the shared
+# metadata, which Alembic autogenerate compares against the database.
+import app.models  # noqa: F401
 from app.api import register_blueprints
+from app.api.security import init_security
 from app.cli import register_cli
 from app.config import SETTINGS_EXTENSION_KEY, Settings, get_settings
 from app.errors import register_error_handlers
@@ -37,6 +41,7 @@ def create_app(settings: Settings | None = None) -> Flask:
     init_request_logging(app)
     register_error_handlers(app)
     init_extensions(app, settings)
+    init_security(app)
     register_blueprints(app)
     register_cli(app)
     return app

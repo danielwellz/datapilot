@@ -1,5 +1,6 @@
 """Application settings, loaded from environment variables."""
 
+from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Self
@@ -23,6 +24,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 SETTINGS_EXTENSION_KEY = "datapilot.settings"
 
 _MIN_PRODUCTION_SECRET_LENGTH = 32
+# RFC 7518 (section 3.2): an HS256 key must be at least as long as the hash
+# output. Shorter keys are brute-forceable offline from any issued token.
+_MIN_JWT_SECRET_LENGTH = 32
 _PLACEHOLDER_MARKER = "change-me"
 
 AppEnv = Literal["development", "test", "production"]
@@ -42,6 +46,9 @@ class Settings(BaseSettings):
         # .env also holds Docker Compose variables that are not ours.
         extra="ignore",
         frozen=True,
+        # Validation errors end up in startup logs; by default pydantic prints
+        # the rejected input, which here means secrets and connection strings.
+        hide_input_in_errors=True,
     )
 
     app_env: AppEnv = "development"
@@ -71,6 +78,17 @@ class Settings(BaseSettings):
         # An empty ANTHROPIC_API_KEY= line in .env means "no key", not a key.
         return None if value == "" else value
 
+    @field_validator("jwt_secret_key")
+    @classmethod
+    def _jwt_secret_long_enough_for_hs256(cls, value: SecretStr) -> SecretStr:
+        # Enforced in every environment: tokens signed with a weak key in
+        # development would pass tests that production then fails.
+        if len(value.get_secret_value()) < _MIN_JWT_SECRET_LENGTH:
+            raise ValueError(
+                f"JWT_SECRET_KEY must be at least {_MIN_JWT_SECRET_LENGTH} characters long"
+            )
+        return value
+
     @model_validator(mode="after")
     def _reject_weak_production_secrets(self) -> Self:
         if not self.is_production:
@@ -90,6 +108,14 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @property
+    def access_token_ttl(self) -> timedelta:
+        return timedelta(minutes=self.jwt_access_ttl_minutes)
+
+    @property
+    def refresh_token_ttl(self) -> timedelta:
+        return timedelta(days=self.jwt_refresh_ttl_days)
 
 
 @lru_cache(maxsize=1)

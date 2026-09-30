@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 from flask import Flask
 from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, MetaData, String, Table
@@ -6,6 +8,7 @@ from sqlalchemy.schema import CreateIndex, CreateTable
 
 from app.config import Settings
 from app.extensions import Base, db, get_redis
+from tests.conftest import AppFactory
 
 
 @pytest.mark.usefixtures("app_context")
@@ -53,3 +56,27 @@ def test_naming_convention_gives_constraints_deterministic_names() -> None:
     assert "CONSTRAINT uq_orders_number UNIQUE" in ddl
     assert "CONSTRAINT ck_orders_total_not_negative CHECK" in ddl
     assert "ix_orders_customer_id" in str(CreateIndex(index).compile(dialect=dialect))
+
+
+def test_token_lifetimes_come_from_settings(make_app: AppFactory) -> None:
+    app = make_app(jwt_access_ttl_minutes=5, jwt_refresh_ttl_days=2)
+
+    assert app.config["JWT_ACCESS_TOKEN_EXPIRES"] == timedelta(minutes=5)
+    assert app.config["JWT_REFRESH_TOKEN_EXPIRES"] == timedelta(days=2)
+
+
+def test_refresh_cookie_is_strict_persistent_and_scoped_to_auth_endpoints(app: Flask) -> None:
+    assert app.config["JWT_REFRESH_COOKIE_PATH"] == "/api/auth"
+    assert app.config["JWT_COOKIE_SAMESITE"] == "Strict"
+    assert app.config["JWT_COOKIE_CSRF_PROTECT"] is True
+    assert app.config["JWT_SESSION_COOKIE"] is False
+
+
+@pytest.mark.parametrize(("app_env", "secure"), [("test", False), ("production", True)])
+def test_cookies_are_secure_only_in_production(
+    make_app: AppFactory, app_env: str, secure: bool
+) -> None:
+    strong = "s" * 40
+    app = make_app(app_env=app_env, secret_key=strong, jwt_secret_key=strong)
+
+    assert app.config["JWT_COOKIE_SECURE"] is secure

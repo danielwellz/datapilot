@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 from pydantic import ValidationError
 
@@ -6,7 +8,7 @@ from tests.settings import make_test_settings
 
 REQUIRED_ENVIRONMENT = {
     "SECRET_KEY": "secret-from-environment",
-    "JWT_SECRET_KEY": "jwt-secret-from-environment",
+    "JWT_SECRET_KEY": "jwt-secret-from-environment-32-chars",
     "DATABASE_URL": "postgresql+psycopg://user:pass@db.internal:5432/datapilot",
     "REDIS_URL": "redis://cache.internal:6379/0",
 }
@@ -103,6 +105,34 @@ def test_production_settings_reject_placeholder_or_short_secrets(
         make_test_settings(
             app_env="production", secret_key=secret_key, jwt_secret_key=jwt_secret_key
         )
+
+
+def test_settings_reject_a_jwt_secret_shorter_than_32_characters_in_any_environment() -> None:
+    with pytest.raises(ValidationError, match="JWT_SECRET_KEY must be at least 32 characters"):
+        make_test_settings(app_env="development", jwt_secret_key="x" * 31)
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"jwt_secret_key": "short-SECRET-VALUE"},
+        {"app_env": "production", "secret_key": "change-me-SECRET-VALUE" + STRONG_SECRET},
+        {"app_env": "production", "jwt_secret_key": "SECRET-VALUE" + STRONG_SECRET},
+    ],
+)
+def test_settings_errors_never_print_the_rejected_values(overrides: dict[str, str]) -> None:
+    with pytest.raises(ValidationError) as caught:
+        make_test_settings(**overrides)
+
+    assert "SECRET-VALUE" not in str(caught.value)
+    assert "input_value" not in str(caught.value)
+
+
+def test_token_lifetimes_are_exposed_as_durations() -> None:
+    settings = make_test_settings(jwt_access_ttl_minutes=5, jwt_refresh_ttl_days=2)
+
+    assert settings.access_token_ttl == timedelta(minutes=5)
+    assert settings.refresh_token_ttl == timedelta(days=2)
 
 
 def test_production_settings_accept_strong_secrets() -> None:
