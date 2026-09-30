@@ -16,6 +16,9 @@ REQUEST_ID_HEADER = "X-Request-ID"
 # or break a line (newlines, quotes, very long values) is replaced.
 _REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._-]{1,128}")
 
+# Identifies the handler configure_logging installs, so it can be replaced.
+STDOUT_HANDLER_NAME = "app.stdout"
+
 access_logger = logging.getLogger("app.access")
 
 
@@ -27,13 +30,9 @@ class RequestIdFilter(logging.Filter):
         return True
 
 
-class _AppLogHandler(logging.StreamHandler[IO[str]]):
-    """Marker type so ``configure_logging`` can replace its own handler on reconfiguration."""
-
-
 def build_log_handler(stream: IO[str]) -> logging.Handler:
     """Create a handler that writes one JSON object per line to ``stream``."""
-    handler = _AppLogHandler(stream)
+    handler = logging.StreamHandler(stream)
     handler.setFormatter(
         JsonFormatter(
             "{levelname}{name}{message}",
@@ -50,13 +49,15 @@ def configure_logging(level: str) -> None:
     """Send every log record, ours and third-party, to stdout as JSON.
 
     Safe to call more than once (tests and CLI commands create several apps):
-    the previous handler installed here is replaced, while handlers added by
-    others, such as pytest's log capture, are left alone.
+    the handler installed by a previous call is replaced, while handlers added
+    by others, such as log capture in tests, are left alone.
     """
     root = logging.getLogger()
-    for handler in [h for h in root.handlers if isinstance(h, _AppLogHandler)]:
+    for handler in [h for h in root.handlers if h.get_name() == STDOUT_HANDLER_NAME]:
         root.removeHandler(handler)
-    root.addHandler(build_log_handler(sys.stdout))
+    handler = build_log_handler(sys.stdout)
+    handler.set_name(STDOUT_HANDLER_NAME)
+    root.addHandler(handler)
     root.setLevel(level)
 
 

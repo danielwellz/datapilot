@@ -8,7 +8,7 @@ from flask.testing import FlaskClient
 
 from app import create_app
 from app.config import Settings
-from app.logging import REQUEST_ID_HEADER, configure_logging
+from app.logging import REQUEST_ID_HEADER, STDOUT_HANDLER_NAME, configure_logging
 from tests.logs import LogCapture
 
 app_logger = logging.getLogger("app.tests")
@@ -111,15 +111,16 @@ def restore_root_logger() -> Iterator[None]:
 
 
 @pytest.mark.usefixtures("restore_root_logger")
-def test_configure_logging_replaces_its_own_handler_instead_of_adding_another() -> None:
+def test_configure_logging_replaces_its_own_handler_and_keeps_others(
+    captured_logs: LogCapture,
+) -> None:
     root = logging.getLogger()
-    others_before = [h for h in root.handlers if type(h).__name__ != "_AppLogHandler"]
 
     configure_logging("DEBUG")
     configure_logging("WARNING")
+    app_logger.warning("still captured")
 
-    ours = [h for h in root.handlers if type(h).__name__ == "_AppLogHandler"]
-    others_after = [h for h in root.handlers if type(h).__name__ != "_AppLogHandler"]
+    ours = [h for h in root.handlers if h.get_name() == STDOUT_HANDLER_NAME]
     assert len(ours) == 1
-    assert others_after == others_before
     assert root.level == logging.WARNING
+    assert [line["message"] for line in captured_logs.records("app.tests")] == ["still captured"]
