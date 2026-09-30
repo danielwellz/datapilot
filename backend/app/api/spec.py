@@ -11,7 +11,8 @@ every failure is rendered by ``app.errors`` in the standard envelope.
 from typing import Any
 
 from pydantic import BaseModel, ValidationError
-from spectree import SpecTree
+from spectree import SecurityScheme, SecuritySchemeData, SpecTree
+from spectree.models import SecureType
 
 from app.errors import ValidationFailed
 from app.schemas.errors import ErrorOut
@@ -55,4 +56,15 @@ spec = SpecTree(
     after=_raise_response_validation_error,
     validation_error_model=ErrorOut,
     naming_strategy=_model_name,
+    security_schemes=[
+        SecurityScheme(
+            name="bearerAuth",
+            data=SecuritySchemeData(
+                type=SecureType.HTTP,
+                scheme="bearer",
+                bearer_format="JWT",
+                description="Access token from login or refresh, valid for 15 minutes.",
+            ),
+        ),
+    ],
 )

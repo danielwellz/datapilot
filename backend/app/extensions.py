@@ -1,6 +1,6 @@
 """Flask extensions, created once and bound to each app in ``init_extensions``."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from flask import Flask, current_app
@@ -25,6 +25,9 @@ NAMING_CONVENTION = {
 
 # Absolute, so migrations are found whatever the working directory is.
 MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "migrations"
+
+# The refresh cookie is only sent to the endpoints that consume it.
+REFRESH_COOKIE_PATH = "/api/auth"
 
 _REDIS_EXTENSION_KEY = "datapilot.redis"
 # Fail fast when Redis is unreachable instead of holding a worker for the
@@ -66,6 +69,21 @@ def init_extensions(app: Flask, settings: Settings) -> None:
             "connect_args": {"connect_timeout": _DATABASE_CONNECT_TIMEOUT_SECONDS},
         },
         JWT_SECRET_KEY=settings.jwt_secret_key.get_secret_value(),
+        # Access tokens travel in the Authorization header, refresh tokens in
+        # a cookie; each endpoint names the one location it accepts.
+        JWT_TOKEN_LOCATION=["headers", "cookies"],
+        JWT_ACCESS_TOKEN_EXPIRES=timedelta(minutes=settings.jwt_access_ttl_minutes),
+        JWT_REFRESH_TOKEN_EXPIRES=timedelta(days=settings.jwt_refresh_ttl_days),
+        JWT_REFRESH_COOKIE_PATH=REFRESH_COOKIE_PATH,
+        # The CSRF cookie must be readable by the single-page app, which runs
+        # at "/": document.cookie only lists cookies whose path covers the page.
+        JWT_REFRESH_CSRF_COOKIE_PATH="/",
+        JWT_COOKIE_SAMESITE="Strict",
+        JWT_COOKIE_SECURE=settings.is_production,
+        JWT_COOKIE_CSRF_PROTECT=True,
+        # Persistent cookies (Max-Age = refresh TTL): staying logged in must
+        # survive a browser restart.
+        JWT_SESSION_COOKIE=False,
     )
     db.init_app(app)
     migrate.init_app(app, db, directory=str(MIGRATIONS_DIR), compare_type=True)

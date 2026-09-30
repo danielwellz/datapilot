@@ -45,8 +45,13 @@ def create_user(
     full_name: str = "Ana Lima",
     password_hash: str | None = None,
 ) -> User:
-    """Insert a user and flush, so it has an id and its server defaults."""
+    """Insert and commit a user, as an earlier request would have.
+
+    Committing matters: the session is removed whenever an app context ends,
+    which discards anything only flushed. In the test harness the commit only
+    releases a savepoint, so the row still disappears with the test.
+    """
     user = build_user(email=email, full_name=full_name, password_hash=password_hash)
     db.session.add(user)
-    db.session.flush()
+    db.session.commit()
     return user

@@ -4,6 +4,7 @@ from flask import Blueprint, request
 from spectree import Response
 
 from app.api.rate_limits import RateLimitRule, enforce_rate_limit
+from app.api.security import BEARER_AUTH, current_user, require_access_token
 from app.api.spec import spec
 from app.extensions import db
 from app.schemas.auth import UserCreate, UserOut
@@ -49,3 +50,13 @@ def register(json: UserCreate) -> tuple[UserOut, int]:
     enforce_rate_limit(REGISTER_PER_IP, _client_ip())
     user = _auth_service().register(json)
     return UserOut.model_validate(user), 201
+
+
+@auth.get("/me")
+@spec.validate(
+    resp=Response(HTTP_200=UserOut, HTTP_401=ErrorOut), tags=["auth"], security=BEARER_AUTH
+)
+@require_access_token
+def me() -> UserOut:
+    """The user the access token belongs to."""
+    return UserOut.model_validate(current_user())

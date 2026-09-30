@@ -6,7 +6,7 @@ from tests.settings import make_test_settings
 
 REQUIRED_ENVIRONMENT = {
     "SECRET_KEY": "secret-from-environment",
-    "JWT_SECRET_KEY": "jwt-secret-from-environment",
+    "JWT_SECRET_KEY": "jwt-secret-from-environment-32-chars",
     "DATABASE_URL": "postgresql+psycopg://user:pass@db.internal:5432/datapilot",
     "REDIS_URL": "redis://cache.internal:6379/0",
 }
@@ -103,6 +103,11 @@ def test_production_settings_reject_placeholder_or_short_secrets(
         make_test_settings(
             app_env="production", secret_key=secret_key, jwt_secret_key=jwt_secret_key
         )
+
+
+def test_settings_reject_a_jwt_secret_shorter_than_32_characters_in_any_environment() -> None:
+    with pytest.raises(ValidationError, match="JWT_SECRET_KEY must be at least 32 characters"):
+        make_test_settings(app_env="development", jwt_secret_key="x" * 31)
 
 
 def test_production_settings_accept_strong_secrets() -> None:

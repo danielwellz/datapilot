@@ -23,6 +23,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 SETTINGS_EXTENSION_KEY = "datapilot.settings"
 
 _MIN_PRODUCTION_SECRET_LENGTH = 32
+# RFC 7518 (section 3.2): an HS256 key must be at least as long as the hash
+# output. Shorter keys are brute-forceable offline from any issued token.
+_MIN_JWT_SECRET_LENGTH = 32
 _PLACEHOLDER_MARKER = "change-me"
 
 AppEnv = Literal["development", "test", "production"]
@@ -70,6 +73,17 @@ class Settings(BaseSettings):
     def _empty_key_means_none(cls, value: object) -> object:
         # An empty ANTHROPIC_API_KEY= line in .env means "no key", not a key.
         return None if value == "" else value
+
+    @field_validator("jwt_secret_key")
+    @classmethod
+    def _jwt_secret_long_enough_for_hs256(cls, value: SecretStr) -> SecretStr:
+        # Enforced in every environment: tokens signed with a weak key in
+        # development would pass tests that production then fails.
+        if len(value.get_secret_value()) < _MIN_JWT_SECRET_LENGTH:
+            raise ValueError(
+                f"JWT_SECRET_KEY must be at least {_MIN_JWT_SECRET_LENGTH} characters long"
+            )
+        return value
 
     @model_validator(mode="after")
     def _reject_weak_production_secrets(self) -> Self:

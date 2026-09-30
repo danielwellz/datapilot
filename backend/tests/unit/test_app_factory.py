@@ -41,7 +41,7 @@ def test_create_app_reads_environment_when_no_settings_are_injected(
     for name, value in {
         "APP_ENV": "development",
         "SECRET_KEY": "secret-from-environment",
-        "JWT_SECRET_KEY": "jwt-secret-from-environment",
+        "JWT_SECRET_KEY": "jwt-secret-from-environment-32-chars",
         "DATABASE_URL": "postgresql+psycopg://u:p@db.internal:5432/app",
         "REDIS_URL": "redis://cache.internal:6379/0",
     }.items():

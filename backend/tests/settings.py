@@ -36,7 +36,7 @@ def make_test_settings(**overrides: Any) -> Settings:
     values: dict[str, Any] = {
         "app_env": "test",
         "secret_key": "test-secret-key",
-        "jwt_secret_key": "test-jwt-secret-key",
+        "jwt_secret_key": "test-jwt-secret-key-of-32-characters",
         "database_url": os.environ.get("TEST_DATABASE_URL", DEFAULT_TEST_DATABASE_URL),
         "redis_url": os.environ.get("TEST_REDIS_URL", DEFAULT_TEST_REDIS_URL),
     }
