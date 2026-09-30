@@ -126,6 +126,18 @@ def test_non_json_body_returns_415(probe_client: FlaskClient) -> None:
     assert error_of(response)["code"] == "unsupported_media_type"
 
 
+@pytest.mark.parametrize(
+    ("method", "path", "status"),
+    [("POST", "/api/probe/missing", 404), ("POST", "/api/probe/broken", 405)],
+)
+def test_routing_errors_take_precedence_over_the_json_body_check(
+    probe_client: FlaskClient, method: str, path: str, status: int
+) -> None:
+    response = probe_client.open(path, method=method, data={"name": "a"})
+
+    assert response.status_code == status
+
+
 def test_body_over_the_size_limit_returns_413(probe_client: FlaskClient) -> None:
     oversized = '{"name": "' + "a" * (1024 * 1024) + '"}'
 

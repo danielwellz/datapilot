@@ -26,6 +26,10 @@ def require_json_body() -> None:
     """
     if request.method not in _METHODS_WITH_BODY or not request.get_data(cache=True):
         return
+    # An unknown URL or method must still answer 404 or 405, which Flask raises
+    # only after the before_request hooks have run.
+    if request.routing_exception is not None:
+        return
     if not request.is_json:
         raise UnsupportedMediaType("Request bodies must be JSON (Content-Type: application/json).")
     if request.get_json(silent=True) is None:
