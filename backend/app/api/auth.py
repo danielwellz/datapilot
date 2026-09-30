@@ -2,7 +2,7 @@
 
 from flask import Blueprint, request
 from flask import Response as FlaskResponse
-from flask_jwt_extended import get_jwt, unset_jwt_cookies
+from flask_jwt_extended import get_jwt, unset_refresh_cookies
 from spectree import Response
 
 from app.api.rate_limits import RateLimitRule, enforce_rate_limit
@@ -138,7 +138,7 @@ def logout() -> FlaskResponse:
     claims = get_jwt()
     refresh_token_store().revoke(claims["jti"], claims["exp"])
     response = FlaskResponse(status=204)
-    unset_jwt_cookies(response)
+    unset_refresh_cookies(response)
     return response
 
 

@@ -43,6 +43,8 @@ def test_logout_returns_204_and_clears_both_cookies(app: Flask, client: FlaskCli
 
     assert response.status_code == 204
     assert response.get_data() == b""
+    # Exactly the two cookies login sets, and no others.
+    assert len(response.headers.getlist("Set-Cookie")) == 2
     # Cleared by overwriting each cookie, on its own path, with an expiry in 1970.
     for name, path in ((REFRESH_COOKIE, "/api/auth"), (CSRF_COOKIE, "/")):
         cookie = set_cookie(response, name)
