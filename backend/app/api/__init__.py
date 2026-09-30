@@ -9,11 +9,13 @@ from flask import Blueprint, Flask, request
 from werkzeug.exceptions import BadRequest, UnsupportedMediaType
 
 from app.api.docs import docs
+from app.api.system import system
 
 _METHODS_WITH_BODY = frozenset({"POST", "PUT", "PATCH"})
 
 api = Blueprint("api", __name__, url_prefix="/api")
 api.register_blueprint(docs)
+api.register_blueprint(system)
 
 
 def require_json_body() -> None:
