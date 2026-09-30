@@ -1,0 +1,94 @@
+[project]
+name = "datapilot-backend"
+version = "0.1.0"
+description = "DataPilot API: sales analytics and natural-language queries over PostgreSQL."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "argon2-cffi>=25.1.0",
+    "flask>=3.1.3",
+    "flask-jwt-extended>=4.7.4",
+    "flask-migrate>=4.1.0",
+    "flask-sqlalchemy>=3.1.1",
+    "gunicorn>=26.2.0",
+    "psycopg[binary]>=3.3.6",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "python-json-logger>=4.2.0",
+    "redis>=8.1.0",
+    "sqlalchemy>=2.1.1",
+]
+
+[dependency-groups]
+dev = [
+    "factory-boy>=3.3.3",
+    "mypy>=2.3.1",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.9",
+]
+
+# An application, not a library: uv manages the environment but does not
+# build or install the project itself.
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "S",    # flake8-bandit (security)
+    "N",    # pep8-naming
+    "SIM",  # flake8-simplify
+    "C4",   # flake8-comprehensions
+    "PT",   # flake8-pytest-style
+    "RET",  # flake8-return
+    "PTH",  # prefer pathlib
+    "ERA",  # commented-out code
+    "RUF",  # ruff-specific rules
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Plain assert is how pytest expresses expectations.
+"tests/**/*.py" = ["S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["app", "tests"]
+plugins = ["pydantic.mypy"]
+warn_unreachable = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-fail-under=85",
+]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
