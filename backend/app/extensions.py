@@ -1,5 +1,7 @@
 """Flask extensions, created once and bound to each app in ``init_extensions``."""
 
+from pathlib import Path
+
 from flask import Flask, current_app
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
@@ -19,6 +21,9 @@ NAMING_CONVENTION = {
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
     "pk": "pk_%(table_name)s",
 }
+
+# Absolute, so migrations are found whatever the working directory is.
+MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "migrations"
 
 _REDIS_EXTENSION_KEY = "datapilot.redis"
 # Fail fast when Redis is unreachable instead of holding a worker for the
@@ -48,7 +53,7 @@ def init_extensions(app: Flask, settings: Settings) -> None:
         JWT_SECRET_KEY=settings.jwt_secret_key.get_secret_value(),
     )
     db.init_app(app)
-    migrate.init_app(app, db, compare_type=True)
+    migrate.init_app(app, db, directory=str(MIGRATIONS_DIR), compare_type=True)
     jwt.init_app(app)
     app.extensions[_REDIS_EXTENSION_KEY] = Redis.from_url(
         str(settings.redis_url),

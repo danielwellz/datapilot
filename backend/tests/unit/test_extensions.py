@@ -1,3 +1,4 @@
+import pytest
 from flask import Flask
 from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, MetaData, String, Table
 from sqlalchemy.dialects import postgresql
@@ -7,7 +8,8 @@ from app.config import Settings
 from app.extensions import Base, db, get_redis
 
 
-def test_redis_client_uses_configured_database_and_timeouts(app: Flask, settings: Settings) -> None:
+@pytest.mark.usefixtures("app_context")
+def test_redis_client_uses_configured_database_and_timeouts(settings: Settings) -> None:
     kwargs = get_redis().connection_pool.connection_kwargs
 
     assert settings.redis_url.path is not None
@@ -17,6 +19,7 @@ def test_redis_client_uses_configured_database_and_timeouts(app: Flask, settings
     assert kwargs["decode_responses"] is True
 
 
+@pytest.mark.usefixtures("app_context")
 def test_database_engine_uses_configured_url(app: Flask, settings: Settings) -> None:
     url = db.engine.url
 
