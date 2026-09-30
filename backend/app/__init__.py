@@ -3,6 +3,7 @@
 from flask import Flask
 
 from app.config import SETTINGS_EXTENSION_KEY, Settings, get_settings
+from app.logging import configure_logging, init_request_logging
 
 
 def create_app(settings: Settings | None = None) -> Flask:
@@ -14,6 +15,7 @@ def create_app(settings: Settings | None = None) -> Flask:
     the developer's environment or ``.env`` file.
     """
     settings = settings or get_settings()
+    configure_logging(settings.log_level)
 
     # A JSON API: there are no static files to serve.
     app = Flask(__name__, static_folder=None)
@@ -22,4 +24,7 @@ def create_app(settings: Settings | None = None) -> Flask:
         TESTING=settings.app_env == "test",
     )
     app.extensions[SETTINGS_EXTENSION_KEY] = settings
+
+    # Registered first so every later hook and handler can use the request id.
+    init_request_logging(app)
     return app
