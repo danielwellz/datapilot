@@ -64,8 +64,15 @@ def test_me_with_an_expired_access_token_returns_401(app: Flask, client: FlaskCl
 def test_me_rejects_a_token_signed_with_another_key(client: FlaskClient) -> None:
     user = create_user()
     now = datetime.now(UTC)
-    claims = {"sub": str(user.id), "type": "access", "jti": "x", "iat": now, "nbf": now,
-              "exp": now + timedelta(minutes=5), "fresh": False}  # fmt: skip
+    claims = {
+        "sub": str(user.id),
+        "type": "access",
+        "jti": "forged",
+        "iat": now,
+        "nbf": now,
+        "exp": now + timedelta(minutes=5),
+        "fresh": False,
+    }
     forged = pyjwt.encode(claims, "an-attacker-key-of-sufficient-length!", algorithm="HS256")
 
     assert_rejected(client.get(URL, headers=bearer(forged)), "The token is invalid.")
