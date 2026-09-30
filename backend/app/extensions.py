@@ -1,5 +1,6 @@
 """Flask extensions, created once and bound to each app in ``init_extensions``."""
 
+from datetime import datetime
 from pathlib import Path
 
 from flask import Flask, current_app
@@ -7,8 +8,8 @@ from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from redis import Redis
-from sqlalchemy import MetaData
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import DateTime, MetaData
+from sqlalchemy.orm import DeclarativeBase, registry
 
 from app.config import Settings
 
@@ -33,7 +34,21 @@ _DATABASE_CONNECT_TIMEOUT_SECONDS = 5
 
 
 class Base(DeclarativeBase):
-    metadata = MetaData(naming_convention=NAMING_CONVENTION)
+    """Declarative base of every model.
+
+    Models subclass this rather than ``db.Model``: they share its metadata, so
+    Flask-SQLAlchemy and Alembic see them all the same, and mypy can type
+    them, which it cannot do for the dynamically built ``db.Model``.
+    """
+
+    # Set through the registry rather than as class attributes, because
+    # Flask-SQLAlchemy subclasses this base to build db.Model.
+    registry = registry(
+        metadata=MetaData(naming_convention=NAMING_CONVENTION),
+        # Every timestamp is an instant (timestamptz); a naive datetime cannot
+        # be compared or serialized as UTC without guessing its zone.
+        type_annotation_map={datetime: DateTime(timezone=True)},
+    )
 
 
 db = SQLAlchemy(model_class=Base)
