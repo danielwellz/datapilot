@@ -45,6 +45,9 @@ class Settings(BaseSettings):
         # .env also holds Docker Compose variables that are not ours.
         extra="ignore",
         frozen=True,
+        # Validation errors end up in startup logs; by default pydantic prints
+        # the rejected input, which here means secrets and connection strings.
+        hide_input_in_errors=True,
     )
 
     app_env: AppEnv = "development"

@@ -110,6 +110,22 @@ def test_settings_reject_a_jwt_secret_shorter_than_32_characters_in_any_environm
         make_test_settings(app_env="development", jwt_secret_key="x" * 31)
 
 
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"jwt_secret_key": "short-SECRET-VALUE"},
+        {"app_env": "production", "secret_key": "change-me-SECRET-VALUE" + STRONG_SECRET},
+        {"app_env": "production", "jwt_secret_key": "SECRET-VALUE" + STRONG_SECRET},
+    ],
+)
+def test_settings_errors_never_print_the_rejected_values(overrides: dict[str, str]) -> None:
+    with pytest.raises(ValidationError) as caught:
+        make_test_settings(**overrides)
+
+    assert "SECRET-VALUE" not in str(caught.value)
+    assert "input_value" not in str(caught.value)
+
+
 def test_production_settings_accept_strong_secrets() -> None:
     settings = make_test_settings(
         app_env="production", secret_key=STRONG_SECRET, jwt_secret_key=STRONG_SECRET
