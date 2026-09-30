@@ -186,7 +186,7 @@ def test_http_exceptions_without_a_known_code_fall_back_to_generic_code(
 
 
 def test_unexpected_exception_renders_generic_500_without_internals(
-    error_client: FlaskClient, captured_logs: LogCapture
+    error_client: FlaskClient,
 ) -> None:
     response = error_client.get("/crash")
 
