@@ -41,7 +41,7 @@ def create_app(settings: Settings | None = None) -> Flask:
     init_request_logging(app)
     register_error_handlers(app)
     init_extensions(app, settings)
-    init_security()
+    init_security(app)
     register_blueprints(app)
     register_cli(app)
     return app

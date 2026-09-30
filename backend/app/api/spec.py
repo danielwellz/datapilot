@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 from spectree import SecurityScheme, SecuritySchemeData, SpecTree
-from spectree.models import SecureType
+from spectree.models import InType, SecureType
 
 from app.errors import ValidationFailed
 from app.schemas.errors import ErrorOut
@@ -64,6 +64,24 @@ spec = SpecTree(
                 scheme="bearer",
                 bearer_format="JWT",
                 description="Access token from login or refresh, valid for 15 minutes.",
+            ),
+        ),
+        SecurityScheme(
+            name="refreshCookie",
+            data=SecuritySchemeData(
+                type=SecureType.API_KEY,
+                name="refresh_token_cookie",
+                field_in=InType.COOKIE,
+                description="Refresh token, set by login and refresh (httpOnly, path /api/auth).",
+            ),
+        ),
+        SecurityScheme(
+            name="csrfHeader",
+            data=SecuritySchemeData(
+                type=SecureType.API_KEY,
+                name="X-CSRF-TOKEN",
+                field_in=InType.HEADER,
+                description="The value of the csrf_refresh_token cookie (double-submit).",
             ),
         ),
     ],

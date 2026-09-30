@@ -1,10 +1,20 @@
 """Authentication endpoints: registration, login, token refresh, logout and the current user."""
 
 from flask import Blueprint, request
+from flask_jwt_extended import get_jwt
 from spectree import Response
 
 from app.api.rate_limits import RateLimitRule, enforce_rate_limit
-from app.api.security import BEARER_AUTH, current_user, require_access_token, start_session
+from app.api.security import (
+    BEARER_AUTH,
+    FAMILY_CLAIM,
+    REFRESH_AUTH,
+    current_user,
+    refresh_token_store,
+    require_access_token,
+    require_refresh_token,
+    start_session,
+)
 from app.api.spec import spec
 from app.extensions import db
 from app.schemas.auth import LoginIn, SessionOut, UserCreate, UserOut
@@ -89,6 +99,26 @@ def login(json: LoginIn) -> SessionOut:
     enforce_rate_limit(LOGIN_PER_IP_AND_EMAIL, f"{client_ip}|{json.email}")
     user = _auth_service().authenticate(json.email, json.password.get_secret_value())
     return start_session(user)
+
+
+@auth.post("/refresh")
+@spec.validate(
+    resp=Response(HTTP_200=SessionOut, HTTP_401=ErrorOut, HTTP_403=ErrorOut),
+    tags=["auth"],
+    security=REFRESH_AUTH,
+)
+@require_refresh_token
+def refresh() -> SessionOut:
+    """Exchange the refresh cookie for a new access token.
+
+    The refresh token is rotated: the response sets a new one and the old
+    one is spent. Presenting a spent token again (after a 10-second grace
+    window for tabs refreshing at the same moment) revokes every token of
+    that login. Requires the `X-CSRF-TOKEN` header (403 without it).
+    """
+    claims = get_jwt()
+    refresh_token_store().rotate(claims["jti"], claims[FAMILY_CLAIM], claims["exp"])
+    return start_session(current_user(), family=claims[FAMILY_CLAIM])
 
 
 @auth.get("/me")
