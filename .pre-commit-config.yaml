@@ -1,0 +1,26 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+
+  # Ruff runs from the backend's locked environment, so the hook, `make
+  # be-lint` and CI always use the same ruff version and configuration.
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff
+        entry: uv run --project backend ruff check --fix
+        language: system
+        types_or: [python, pyi]
+        files: ^backend/
+      - id: ruff-format
+        name: ruff-format
+        entry: uv run --project backend ruff format
+        language: system
+        types_or: [python, pyi]
+        files: ^backend/
