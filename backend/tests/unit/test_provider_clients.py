@@ -73,6 +73,7 @@ def _model(
         provider=provider,
         provider_model="vendor/model-1",
         json_schema=json_schema,
+        skip_evaluation=None,
         api_key=SecretStr(api_key) if api_key else None,
     )
 

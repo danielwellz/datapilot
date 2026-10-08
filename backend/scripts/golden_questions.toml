@@ -1,0 +1,90 @@
+# Golden questions for scripts/eval_ask.py, beyond the eight example
+# questions (whose reference SQL is the demo model's, in app/ai/examples.py).
+#
+# Each question is phrased so that it has one right answer, and its
+# reference SQL computes that answer. A model passes when its result has
+# the same rows, in any order, with the same values in some of its columns
+# (extra columns are allowed; numbers are compared at two decimal places).
+
+[[questions]]
+id = "cancelled-by-month-2025"
+question = "How many orders were cancelled in each month of 2025?"
+sql = """
+SELECT date_trunc('month', created_at)::date AS month, count(*) AS cancelled_orders
+FROM v_orders
+WHERE status = 'cancelled' AND created_at >= '2025-01-01' AND created_at < '2026-01-01'
+GROUP BY month
+ORDER BY month
+"""
+
+[[questions]]
+id = "revenue-by-category"
+question = "What is the total revenue from paid orders for each product category over the whole order history?"
+sql = """
+SELECT p.category, round(sum(i.quantity * i.unit_price), 2) AS revenue
+FROM v_order_items i
+JOIN v_orders o ON o.id = i.order_id
+JOIN v_products p ON p.id = i.product_id
+WHERE o.status = 'paid'
+GROUP BY p.category
+ORDER BY revenue DESC
+"""
+
+[[questions]]
+id = "customers-by-country"
+question = "How many customers do we have in each country?"
+sql = """
+SELECT country, count(*) AS customers
+FROM v_customers
+GROUP BY country
+ORDER BY customers DESC, country
+"""
+
+[[questions]]
+id = "units-per-order-last-month"
+question = "What was the average number of units per paid order last month?"
+sql = """
+SELECT round(avg(units), 2) AS average_units
+FROM (
+    SELECT o.id, sum(i.quantity) AS units
+    FROM v_orders o
+    JOIN v_order_items i ON i.order_id = o.id
+    WHERE o.status = 'paid'
+      AND o.created_at >= date_trunc('month', now()) - interval '1 month'
+      AND o.created_at < date_trunc('month', now())
+    GROUP BY o.id
+) AS per_order
+"""
+
+[[questions]]
+id = "top-customers-365-days"
+question = "Which 5 customers spent the most on paid orders in the last 365 days? Show their ids and revenue."
+sql = """
+SELECT customer_id, round(sum(total), 2) AS revenue
+FROM v_orders
+WHERE status = 'paid' AND created_at >= now() - interval '365 days'
+GROUP BY customer_id
+ORDER BY revenue DESC
+LIMIT 5
+"""
+
+[[questions]]
+id = "marketplace-share"
+question = "What percentage of all orders came through the marketplace channel?"
+sql = """
+SELECT round(100.0 * count(*) FILTER (WHERE channel = 'marketplace') / nullif(count(*), 0), 2)
+    AS marketplace_percent
+FROM v_orders
+"""
+
+[[questions]]
+id = "germany-revenue-2025"
+question = "What was the total revenue from paid orders placed by customers in Germany in 2025?"
+sql = """
+SELECT round(sum(o.total), 2) AS revenue
+FROM v_orders o
+JOIN v_customers c ON c.id = o.customer_id
+WHERE c.country = 'DE'
+  AND o.status = 'paid'
+  AND o.created_at >= '2025-01-01' AND o.created_at < '2026-01-01'
+"""

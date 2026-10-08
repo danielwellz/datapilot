@@ -9,7 +9,8 @@
 # Model ids are this application's own names, the only ones clients may send.
 # provider_model is the provider's name for the model. json_schema says
 # whether the model accepts a JSON schema for its output; every answer is
-# validated either way.
+# validated either way. skip_evaluation, when set, says why `make eval-ask`
+# leaves the model out unless it is named with --models.
 #
 # Order matters: with LLM_DEFAULT_MODEL unset, the default is the first
 # enabled model. Base URLs and model names were checked on 2026-10-08.
@@ -54,6 +55,7 @@ provider = "gemini"
 label = "Gemini 3.5 Flash"
 provider_model = "gemini-3.5-flash"
 json_schema = true
+skip_evaluation = "Its free tier allows only 20 requests a day, fewer than one evaluation run needs."
 
 [[models]]
 id = "groq-qwen3.8-27b"
@@ -90,3 +92,4 @@ provider = "fake"
 label = "Demo model (example questions only)"
 provider_model = "fake"
 json_schema = false
+skip_evaluation = "It answers only the example questions."

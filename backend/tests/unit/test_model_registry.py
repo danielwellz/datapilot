@@ -248,3 +248,11 @@ def test_the_app_refuses_to_start_with_a_default_model_outside_the_registry(
 ) -> None:
     with pytest.raises(RegistryError, match="'gpt-9' is not a model in the registry"):
         make_app(llm_default_model="gpt-9")
+
+
+def test_models_can_carry_a_reason_to_skip_the_evaluation() -> None:
+    registry = ModelRegistry(RegistryConfig.load(DEFAULT_REGISTRY_FILE), api_keys={})
+
+    assert registry.resolve("fake").skip_evaluation == "It answers only the example questions."
+    config = _config()
+    assert all(model.skip_evaluation is None for model in config.models)

@@ -61,6 +61,8 @@ class ModelConfig(BaseModel):
     label: str = Field(min_length=1)
     provider_model: str = Field(min_length=1)
     json_schema: bool
+    # Why `make eval-ask` leaves this model out unless it is named; None to include it.
+    skip_evaluation: str | None = Field(default=None, min_length=1)
 
 
 class RegistryConfig(BaseModel):
@@ -98,6 +100,7 @@ class RegisteredModel:
     provider: ProviderConfig
     provider_model: str
     json_schema: bool
+    skip_evaluation: str | None
     # None for providers that need no key (the fake model, a local server).
     api_key: SecretStr | None
 
@@ -134,6 +137,7 @@ class ModelRegistry:
                     provider=provider,
                     provider_model=model.provider_model,
                     json_schema=model.json_schema,
+                    skip_evaluation=model.skip_evaluation,
                     api_key=api_key,
                 )
         if not self._enabled:
