@@ -72,7 +72,11 @@ class Order(Base):
     created_at: Mapped[datetime]
 
     customer: Mapped[Customer] = relationship(back_populates="orders", lazy="raise")
-    items: Mapped[list[OrderItem]] = relationship(back_populates="order", lazy="raise")
+    # Product order is arbitrary but fixed, and matches the primary key, so
+    # loading the items needs no sort beyond the index scan.
+    items: Mapped[list[OrderItem]] = relationship(
+        back_populates="order", lazy="raise", order_by="OrderItem.product_id"
+    )
 
     def __repr__(self) -> str:
         return f"Order(id={self.id!r}, status={self.status!r}, total={self.total!r})"
@@ -97,6 +101,10 @@ class OrderItem(Base):
 
     order: Mapped[Order] = relationship(back_populates="items", lazy="raise")
     product: Mapped[Product] = relationship(lazy="raise")
+
+    @property
+    def line_total(self) -> Decimal:
+        return self.unit_price * self.quantity
 
     def __repr__(self) -> str:
         return f"OrderItem(order_id={self.order_id!r}, product_id={self.product_id!r})"

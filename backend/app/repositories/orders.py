@@ -6,9 +6,9 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import ColumnElement, Select, literal, select, tuple_
-from sqlalchemy.orm import Session, contains_eager
+from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
 
-from app.models import Customer, Order, OrderChannel, OrderSort, OrderStatus
+from app.models import Customer, Order, OrderChannel, OrderItem, OrderSort, OrderStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +72,23 @@ def build_list_statement(
     return statement
 
 
+def build_detail_statement(order_id: int) -> Select[Order]:
+    """The query behind the order detail: the order and its customer.
+
+    Its items follow in one more query (``selectinload``) with their
+    products joined in, rather than as a join here, which would repeat the
+    order and customer columns on every item row.
+    """
+    return (
+        select(Order)
+        .where(Order.id == order_id)
+        .options(
+            joinedload(Order.customer, innerjoin=True),
+            selectinload(Order.items).joinedload(OrderItem.product, innerjoin=True),
+        )
+    )
+
+
 def _conditions(filters: OrderFilters) -> list[ColumnElement[bool]]:
     conditions: list[ColumnElement[bool]] = []
     if filters.statuses:
@@ -104,3 +121,7 @@ class OrderRepository:
     ) -> Sequence[Order]:
         """Up to ``limit`` matching orders after ``after``, each with its customer loaded."""
         return self._session.scalars(build_list_statement(filters, sort, after, limit)).all()
+
+    def get_with_details(self, order_id: int) -> Order | None:
+        """The order with its customer and its items' products loaded, or ``None``."""
+        return self._session.scalars(build_detail_statement(order_id)).one_or_none()

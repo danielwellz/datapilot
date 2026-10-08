@@ -1,4 +1,4 @@
-"""Listing orders with filters and keyset pagination."""
+"""Reading orders: a filtered list with keyset pagination, and one order in full."""
 
 import dataclasses
 import hashlib
@@ -12,6 +12,7 @@ from typing import Annotated, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 from sqlalchemy.orm import Session
 
+from app.errors import NotFound
 from app.models import Order, OrderSort
 from app.repositories.orders import Keyset, OrderFilters, OrderRepository
 from app.schemas.orders import OrderListQuery
@@ -42,6 +43,10 @@ class _TotalCursor(_CursorPayload):
 _cursor_adapter: TypeAdapter[_CreatedAtCursor | _TotalCursor] = TypeAdapter(
     Annotated[_CreatedAtCursor | _TotalCursor, Field(discriminator="sort")]
 )
+
+
+class OrderNotFound(NotFound):
+    default_message = "The order does not exist."
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +81,13 @@ class OrderService:
         if len(rows) > query.limit:
             next_cursor = self._write_cursor(page[-1], query.sort, fingerprint)
         return OrderPage(orders=page, next_cursor=next_cursor)
+
+    def get_order(self, order_id: int) -> Order:
+        """The order with its customer and items, or raise ``OrderNotFound``."""
+        order = self._orders.get_with_details(order_id)
+        if order is None:
+            raise OrderNotFound(details=[{"order_id": order_id}])
+        return order
 
     def _write_cursor(self, last: Order, sort: OrderSort, fingerprint: str) -> str:
         key = last.created_at if sort is OrderSort.CREATED_AT else last.total

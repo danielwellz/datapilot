@@ -105,3 +105,46 @@ class OrderPageOut(BaseModel):
     next_cursor: str | None = Field(
         description="Pass as `cursor` to get the next page; null on the last page."
     )
+
+
+class CustomerOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    email: str
+    country: str
+    signed_up_at: UtcDatetime
+
+
+class OrderItemProductOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    category: str
+
+
+class OrderItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    product: OrderItemProductOut
+    quantity: int
+    unit_price: Money = Field(
+        description="The price paid per unit, fixed when the order was placed."
+    )
+    line_total: Money = Field(description="`unit_price` times `quantity`.")
+
+
+class OrderOut(BaseModel):
+    """An order with its customer and items."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    status: OrderStatus
+    channel: OrderChannel
+    total: Money = Field(description="The sum of the items' line totals.")
+    created_at: UtcDatetime
+    customer: CustomerOut
+    items: list[OrderItemOut]
