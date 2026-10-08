@@ -1,9 +1,13 @@
 """Field types shared by request and response schemas."""
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Annotated
 
-from pydantic import AfterValidator, EmailStr, PlainSerializer, WithJsonSchema
+from pydantic import AfterValidator, EmailStr, Field, PlainSerializer, WithJsonSchema
+
+# The largest value of a PostgreSQL bigint, the type of every primary key.
+MAX_DATABASE_ID = 2**63 - 1
 
 
 def _to_utc_iso(value: datetime) -> str:
@@ -29,3 +33,20 @@ Lowercasing the local part is technically lossy (RFC 5321 lets servers treat
 it as case-sensitive), but no mainstream provider does, and treating
 Ana@x.dev and ana@x.dev as two accounts would be far more surprising.
 """
+
+
+def _to_money_string(value: Decimal) -> str:
+    return f"{value:.2f}"
+
+
+Money = Annotated[
+    Decimal,
+    # A JSON number would pass through a float in most clients and lose cents.
+    PlainSerializer(_to_money_string, return_type=str, when_used="json"),
+    WithJsonSchema({"type": "string", "pattern": r"^-?\d+\.\d{2}$", "examples": ["1234.50"]}),
+]
+"""An amount of money, serialized in JSON as a decimal string with two places ("1234.50")."""
+
+DatabaseId = Annotated[int, Field(ge=1, le=MAX_DATABASE_ID)]
+"""A primary key value in a request. Bounded, so an oversized number is a 422
+rather than an out-of-range error from the database."""

@@ -42,24 +42,29 @@ def test_relationships_refuse_to_lazy_load(session: Session) -> None:
         _ = loaded.items
 
 
-def test_sales_tables_have_no_indexes_beyond_keys_and_unique_constraints(
+def test_sales_tables_have_exactly_the_measured_indexes_and_all_are_valid(
     session: Session,
 ) -> None:
-    # Stage 4 measures query plans before adding indexes; an index slipped in
-    # here would make the "before" numbers meaningless.
-    names = session.scalars(
+    # Every index beyond keys was justified by a query plan (docs/performance.md);
+    # one added without that evidence should fail here and be argued for.
+    rows = session.execute(
         text(
-            "SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND tablename IN "
-            "('customers', 'products', 'orders', 'order_items') ORDER BY indexname"
+            "SELECT c.relname, i.indisvalid FROM pg_index i "
+            "JOIN pg_class c ON c.oid = i.indexrelid "
+            "WHERE i.indrelid::regclass::text IN "
+            "('customers', 'products', 'orders', 'order_items') ORDER BY c.relname"
         )
     ).all()
 
-    assert names == [
-        "pk_customers",
-        "pk_order_items",
-        "pk_orders",
-        "pk_products",
-        "uq_customers_email",
+    assert [tuple(row) for row in rows] == [
+        ("ix_orders_created_at_id", True),
+        ("ix_orders_customer_id_created_at_id", True),
+        ("ix_orders_total_id", True),
+        ("pk_customers", True),
+        ("pk_order_items", True),
+        ("pk_orders", True),
+        ("pk_products", True),
+        ("uq_customers_email", True),
     ]
 
 

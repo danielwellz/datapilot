@@ -9,17 +9,27 @@ or roll back savepoints, and nothing ever reaches the database for good.
 Redis: tests use their own database index, flushed before and after each test.
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from contextlib import AbstractContextManager, contextmanager
+from typing import Any
 
 import flask_migrate
 import pytest
 from flask import Flask
 from redis import Redis
-from sqlalchemy import text
+from sqlalchemy import Connection, event, text
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from app.config import Settings
 from app.extensions import db, get_redis
+from tests.factories import create_user
+from tests.tokens import access_token_for, bearer
+
+QueryCounter = Callable[[], AbstractContextManager[list[str]]]
+
+# The harness turns each commit into savepoint statements, which production
+# never runs; they are not queries the code under test chose to make.
+_HARNESS_STATEMENTS = ("SAVEPOINT", "RELEASE SAVEPOINT", "ROLLBACK TO SAVEPOINT")
 
 
 @pytest.fixture(scope="session")
@@ -65,3 +75,42 @@ def redis_client(app: Flask, settings: Settings) -> Iterator[Redis]:
     client.flushdb()
     yield client
     client.flushdb()
+
+
+@pytest.fixture
+def auth_headers(app: Flask) -> dict[str, str]:
+    """An Authorization header for a freshly created analyst."""
+    return bearer(access_token_for(app, create_user()))
+
+
+@pytest.fixture
+def count_queries(db_session: scoped_session[Session]) -> QueryCounter:
+    """Record the SQL run inside ``with count_queries() as statements:``.
+
+    Used to prove an endpoint runs a fixed number of queries whatever the
+    size of its result, which is how an N+1 query shows itself.
+    """
+    connection = db_session.get_bind()
+
+    @contextmanager
+    def counter() -> Iterator[list[str]]:
+        statements: list[str] = []
+
+        def record(
+            _conn: Connection,
+            _cursor: Any,
+            statement: str,
+            _parameters: Any,
+            _context: Any,
+            _executemany: bool,
+        ) -> None:
+            if not statement.startswith(_HARNESS_STATEMENTS):
+                statements.append(statement)
+
+        event.listen(connection, "before_cursor_execute", record)
+        try:
+            yield statements
+        finally:
+            event.remove(connection, "before_cursor_execute", record)
+
+    return counter

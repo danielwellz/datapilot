@@ -9,10 +9,12 @@ FLASK_PORT := 5001
 # Defaults for `make seed`; override on the command line: make seed scale=full
 scale ?= small
 seed ?= 42
+# Measured runs per scenario for `make explain`.
+runs ?= 10
 
 .PHONY: help up down logs reset-db \
 	be-install be-dev be-test be-lint be-format be-typecheck \
-	db-migrate db-upgrade seed \
+	db-migrate db-upgrade seed explain \
 	fe-install fe-dev fe-test fe-lint fe-build \
 	hooks check demo
 
@@ -66,6 +68,9 @@ db-upgrade: ## Apply migrations to the development database
 
 seed: ## Load sales data: make seed scale=small|full [seed=42]
 	cd $(BACKEND) && uv run flask --app app seed --scale $(scale) --seed $(seed)
+
+explain: ## EXPLAIN ANALYZE the orders queries on the dev database: make explain [runs=10]
+	cd $(BACKEND) && uv run python -m scripts.explain_orders --runs $(runs)
 
 # --- Frontend -------------------------------------------------------------
 

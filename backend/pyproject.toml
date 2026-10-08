@@ -75,7 +75,7 @@ known-first-party = ["app", "tests"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["app", "migrations", "tests"]
+files = ["app", "migrations", "scripts", "tests"]
 plugins = ["pydantic.mypy"]
 warn_unreachable = true
 
