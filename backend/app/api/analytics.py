@@ -12,6 +12,8 @@ from app.schemas.analytics import (
     RevenueMonthlyQuery,
     SummaryOut,
     SummaryQuery,
+    TopCustomersOut,
+    TopCustomersQuery,
 )
 from app.schemas.errors import ErrorOut
 from app.services.analytics import AnalyticsService
@@ -40,7 +42,7 @@ def summary(query: SummaryQuery) -> SummaryOut:
     is compared with the period of equal length just before it. Only paid
     orders count as revenue.
     """
-    return _service().summary(query.days, today=clock.utc_today())
+    return _service().summary(query, today=clock.utc_today())
 
 
 @analytics.get("/revenue-monthly")
@@ -57,4 +59,23 @@ def revenue_monthly(query: RevenueMonthlyQuery) -> RevenueMonthlyOut:
     Covers the `months` complete UTC calendar months ending last month,
     oldest first. Months without sales are included with zero revenue.
     """
-    return _service().revenue_monthly(query.months, today=clock.utc_today())
+    return _service().revenue_monthly(query, today=clock.utc_today())
+
+
+@analytics.get("/top-customers")
+@spec.validate(
+    query=TopCustomersQuery,
+    resp=Response(HTTP_200=TopCustomersOut, HTTP_401=ErrorOut, HTTP_422=ErrorOut),
+    tags=_TAGS,
+    security=BEARER_AUTH,
+)
+@require_access_token
+def top_customers(query: TopCustomersQuery) -> TopCustomersOut:
+    """The best customers of each country by paid revenue over the last `days` days.
+
+    Customers are ranked within their country with a dense rank: equal
+    revenue shares a rank and the next rank follows without a gap. Every
+    customer ranked `limit` or better is returned, so ties can make a
+    country return more than `limit` customers.
+    """
+    return _service().top_customers(query, today=clock.utc_today())

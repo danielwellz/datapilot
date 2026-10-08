@@ -57,3 +57,16 @@ class AnalyticsRepository:
             .mappings()
             .all()
         )
+
+    def top_customers(
+        self, *, start_at: datetime, end_at: datetime, country: str | None, limit: int
+    ) -> Sequence[RowMapping]:
+        """Ranked customers, columns named as in ``TopCustomerOut``."""
+        return (
+            self._session.execute(
+                queries.TOP_CUSTOMERS,
+                {"start_at": start_at, "end_at": end_at, "country": country, "limit": limit},
+            )
+            .mappings()
+            .all()
+        )

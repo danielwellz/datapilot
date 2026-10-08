@@ -13,7 +13,12 @@ from app.schemas.analytics import (
     PeriodOut,
     RateMetricOut,
     RevenueMonthlyOut,
+    RevenueMonthlyQuery,
     SummaryOut,
+    SummaryQuery,
+    TopCustomerOut,
+    TopCustomersOut,
+    TopCustomersQuery,
 )
 from app.services.periods import DayRange, preceding_days, trailing_days, trailing_months
 
@@ -33,9 +38,9 @@ class AnalyticsService:
     def __init__(self, session: Session) -> None:
         self._analytics = AnalyticsRepository(session)
 
-    def summary(self, days: int, *, today: date) -> SummaryOut:
-        """KPIs of the ``days`` complete days before ``today`` and of the days before those."""
-        period = trailing_days(today, days)
+    def summary(self, query: SummaryQuery, *, today: date) -> SummaryOut:
+        """KPIs of the ``query.days`` days before ``today``, against the days before those."""
+        period = trailing_days(today, query.days)
         previous_period = preceding_days(period)
         current, previous = self._analytics.period_totals(
             previous_start=previous_period.start_at,
@@ -76,15 +81,26 @@ class AnalyticsService:
             ),
         )
 
-    def revenue_monthly(self, months: int, *, today: date) -> RevenueMonthlyOut:
-        """Revenue of the ``months`` complete calendar months before the month of ``today``."""
-        period = trailing_months(today, months)
+    def revenue_monthly(self, query: RevenueMonthlyQuery, *, today: date) -> RevenueMonthlyOut:
+        """Revenue of the ``query.months`` complete months before the month of ``today``."""
+        period = trailing_months(today, query.months)
         rows = self._analytics.monthly_revenue(
             first_month=period.first_month, last_month=period.last_month
         )
         return RevenueMonthlyOut(
             items=[MonthlyRevenueOut.model_validate(dict(row)) for row in rows]
         )
+
+    def top_customers(self, query: TopCustomersQuery, *, today: date) -> TopCustomersOut:
+        """Customers ranked by paid revenue within each country over the last ``query.days``."""
+        period = trailing_days(today, query.days)
+        rows = self._analytics.top_customers(
+            start_at=period.start_at,
+            end_at=period.end_at,
+            country=query.country,
+            limit=query.limit,
+        )
+        return TopCustomersOut(items=[TopCustomerOut.model_validate(dict(row)) for row in rows])
 
 
 def _average_order_value(totals: PeriodTotals) -> Decimal | None:

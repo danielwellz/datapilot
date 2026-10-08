@@ -10,10 +10,11 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, WithJsonSchema
 
-from app.schemas.types import Money
+from app.schemas.types import CountryCode, Money, UtcDatetime
 
 MAX_DAYS = 365
 MAX_REVENUE_MONTHS = 36
+MAX_RANK = 100
 
 Ratio = Annotated[
     Decimal,
@@ -51,6 +52,27 @@ class RevenueMonthlyQuery(BaseModel):
         ge=1,
         le=MAX_REVENUE_MONTHS,
         description="Number of complete UTC calendar months, ending last month.",
+    )
+
+
+class TopCustomersQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    country: CountryCode | None = Field(
+        default=None, description="Only this country; every country when left out."
+    )
+    limit: int = Field(
+        default=10,
+        ge=1,
+        le=MAX_RANK,
+        description="The worst rank returned in each country. Ties share a rank, "
+        "so a country can return more customers than this.",
+    )
+    days: int = Field(
+        default=365,
+        ge=1,
+        le=MAX_DAYS,
+        description="Length of the period in whole UTC days, ending yesterday.",
     )
 
 
@@ -106,3 +128,19 @@ class RevenueMonthlyOut(BaseModel):
     """Revenue per month, oldest first, with every month present."""
 
     items: list[MonthlyRevenueOut]
+
+
+class TopCustomerOut(BaseModel):
+    country: str
+    rank: int = Field(description="Rank by revenue within the country; ties share a rank.")
+    customer_id: int
+    name: str
+    revenue: Money = Field(description="Total of the customer's paid orders in the period.")
+    orders: int = Field(description="Paid orders in the period.")
+    last_order_at: UtcDatetime = Field(description="The customer's last paid order in the period.")
+
+
+class TopCustomersOut(BaseModel):
+    """Customers ranked by revenue within each country, by country and then rank."""
+
+    items: list[TopCustomerOut]

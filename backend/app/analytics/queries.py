@@ -25,6 +25,7 @@ def _load(name: str) -> TextClause:
 # A missing or misnamed file fails at import, not on the first request.
 SUMMARY = _load("summary")
 REVENUE_MONTHLY = _load("revenue_monthly")
+TOP_CUSTOMERS = _load("top_customers")
 
 LOADED: Mapping[str, TextClause] = MappingProxyType(_loaded)
 """Every loaded query by file name, so a test can prove no file is left unused."""
