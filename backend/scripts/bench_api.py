@@ -8,11 +8,18 @@ routing, token check, queries, serialization and the network hop.
 Requests are sequential on purpose: the numbers describe how long one
 request takes, not how many a server can take at once.
 
+Cached endpoints report ``X-Cache``; the script counts the values it saw.
+With ``--invalidate-cache`` it bumps ``data_version`` in Redis before each
+request (outside the timing), so every request is a cache miss, which is
+how uncached latency is measured. The bump also invalidates every other
+cached response, so only use it against a development stack.
+
 Usage, from ``backend/`` with the API running (for example under gunicorn)::
 
     uv run python -m scripts.bench_api --path "/api/orders" -n 1000
     uv run python -m scripts.bench_api --path "/api/orders?limit=25" --follow-cursor
     uv run python -m scripts.bench_api --path "/api/orders/{order_id}" --max-order-id 2000000
+    uv run python -m scripts.bench_api --path "/api/analytics/summary" -n 100 --invalidate-cache
 """
 
 import argparse
@@ -20,18 +27,41 @@ import json
 import random
 import statistics
 import time
+from collections import Counter
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 from http.client import HTTPConnection, HTTPSConnection
 from urllib.parse import quote, urlsplit
 
+from redis import Redis
+
+from app.config import get_settings
+from app.services.cache import DATA_VERSION_KEY
 from app.services.seeding import DEMO_EMAIL, DEMO_PASSWORD
 
 ORDER_ID_PLACEHOLDER = "{order_id}"
 
-Send = Callable[[str], tuple[int, bytes]]
-"""Send a GET for a path; return the status and body."""
+CACHE_HEADER = "X-Cache"
+
+
+@dataclass(frozen=True, slots=True)
+class Reply:
+    status: int
+    body: bytes
+    cache: str | None = None
+    """The X-Cache header, if the endpoint sent one."""
+
+
+Send = Callable[[str], Reply]
+"""Send a GET for a path and return the reply."""
+
+
+@dataclass(slots=True)
+class Run:
+    latencies_ms: list[float] = field(default_factory=list)
+    cache: Counter[str] = field(default_factory=Counter)
+    """How many replies carried each X-Cache value."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,17 +98,19 @@ def run(
     *,
     follow_cursor: bool = False,
     pick_order_id: Callable[[], int] | None = None,
-) -> list[float]:
-    """Send ``count`` requests built from ``template``; return each latency in milliseconds.
+    before_each: Callable[[], object] | None = None,
+) -> Run:
+    """Send ``count`` requests built from ``template``; return their latencies in milliseconds.
 
     ``{order_id}`` in the template is replaced by ``pick_order_id()`` on
     every request. With ``follow_cursor``, each request continues from the
     previous response's ``next_cursor``, restarting at the first page after
-    the last, so the run reads ever deeper pages.
+    the last, so the run reads ever deeper pages. ``before_each`` runs
+    before every request, outside the timing.
     """
     if (ORDER_ID_PLACEHOLDER in template) != (pick_order_id is not None):
         raise ValueError("Give pick_order_id exactly when the template contains {order_id}")
-    latencies: list[float] = []
+    result = Run()
     cursor: str | None = None
     for _ in range(count):
         path = template
@@ -86,14 +118,18 @@ def run(
             path = path.replace(ORDER_ID_PLACEHOLDER, str(pick_order_id()))
         if cursor is not None:
             path = with_cursor(path, cursor)
+        if before_each is not None:
+            before_each()
         started = time.perf_counter()
-        status, body = send(path)
-        latencies.append((time.perf_counter() - started) * 1000)
-        if status != 200:
-            raise SystemExit(f"GET {path} answered {status}: {body[:300]!r}")
+        reply = send(path)
+        result.latencies_ms.append((time.perf_counter() - started) * 1000)
+        if reply.status != 200:
+            raise SystemExit(f"GET {path} answered {reply.status}: {reply.body[:300]!r}")
+        if reply.cache is not None:
+            result.cache[reply.cache] += 1
         if follow_cursor:
-            cursor = json.loads(body)["next_cursor"]
-    return latencies
+            cursor = json.loads(reply.body)["next_cursor"]
+    return result
 
 
 class ApiClient:
@@ -118,10 +154,10 @@ class ApiClient:
             raise SystemExit(f"Login failed with {response.status}: {payload[:300]!r}")
         self._headers = {"Authorization": f"Bearer {json.loads(payload)['access_token']}"}
 
-    def get(self, path: str) -> tuple[int, bytes]:
+    def get(self, path: str) -> Reply:
         self._connection.request("GET", path, headers=self._headers)
         response = self._connection.getresponse()
-        return response.status, response.read()
+        return Reply(response.status, response.read(), response.getheader(CACHE_HEADER))
 
     def close(self) -> None:
         self._connection.close()
@@ -136,6 +172,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--follow-cursor", action="store_true", help="walk ever deeper pages")
     parser.add_argument("--max-order-id", type=int, help="random ids for {order_id} up to this")
     parser.add_argument("--seed", type=int, default=42, help="seed for the random order ids")
+    parser.add_argument(
+        "--invalidate-cache",
+        action="store_true",
+        help="bump data_version in Redis (REDIS_URL) before every request, so each one misses",
+    )
     parser.add_argument("--email", default=DEMO_EMAIL)
     parser.add_argument("--password", default=DEMO_PASSWORD)
     args = parser.parse_args(argv)
@@ -148,27 +189,44 @@ def main(argv: Sequence[str] | None = None) -> None:
         pick_order_id = partial(rng.randint, 1, args.max_order_id)
 
     client = ApiClient(args.base_url)
+    redis = Redis.from_url(str(get_settings().redis_url)) if args.invalidate_cache else None
 
-    def timed(count: int) -> list[float]:
+    def invalidate() -> None:
+        if redis is not None:
+            redis.incr(DATA_VERSION_KEY)
+
+    def timed(count: int) -> Run:
         return run(
             client.get,
             args.path,
             count,
             follow_cursor=args.follow_cursor,
             pick_order_id=pick_order_id,
+            before_each=invalidate,
         )
 
     try:
         client.log_in(args.email, args.password)
         timed(args.warmup)
-        stats = percentiles(timed(args.requests))
+        result = timed(args.requests)
     finally:
         client.close()
+        if redis is not None:
+            redis.close()
+    stats = percentiles(result.latencies_ms)
     print(
         f"GET {args.path}: {args.requests} requests after {args.warmup} warm-up; "
         f"p50 {stats.p50:.2f} ms, p95 {stats.p95:.2f} ms, p99 {stats.p99:.2f} ms, "
-        f"max {stats.max:.2f} ms, mean {stats.mean:.2f} ms"
+        f"max {stats.max:.2f} ms, mean {stats.mean:.2f} ms" + format_cache(result.cache)
     )
+
+
+def format_cache(cache: Counter[str]) -> str:
+    """``; X-Cache MISS 100`` for the values seen, or nothing for an uncached endpoint."""
+    if not cache:
+        return ""
+    counts = ", ".join(f"{status} {count}" for status, count in sorted(cache.items()))
+    return f"; {CACHE_HEADER} {counts}"
 
 
 if __name__ == "__main__":
