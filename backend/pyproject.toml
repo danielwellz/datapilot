@@ -64,6 +64,10 @@ select = [
 "tests/**/*.py" = ["S101", "S105", "S106"]
 # Error classes are named after the HTTP outcome they produce (`raise NotFound()`).
 "app/errors.py" = ["N818"]
+# Seed data must be reproducible from a seed, which is exactly what a
+# cryptographic generator cannot do; nothing here is security-sensitive.
+"app/seed/*.py" = ["S311"]
+"tests/unit/test_seed_*.py" = ["S311"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "tests"]
