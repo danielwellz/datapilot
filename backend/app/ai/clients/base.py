@@ -10,6 +10,8 @@ Provider failures come in two kinds, and the service treats them differently:
   the question or the model, not about the provider's availability.
 """
 
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
@@ -57,6 +59,17 @@ class ProviderFailure(StrEnum):
     # The key was refused: a configuration problem, but another provider can still answer.
     AUTHENTICATION = "authentication"
     MODEL_UNAVAILABLE = "model_unavailable"
+    # The provider refused the request itself (a 4xx other than the above).
+    REQUEST_REJECTED = "request_rejected"
+
+
+# Worth one quick retry: these usually pass within a second. A rate limit is
+# not retried here; the service moves on to another model instead of
+# keeping the analyst waiting for the provider's window to reopen.
+_TRANSIENT_FAILURES = frozenset(
+    {ProviderFailure.SERVER_ERROR, ProviderFailure.TIMEOUT, ProviderFailure.CONNECTION}
+)
+_TRANSIENT_RETRY_DELAY_SECONDS = 0.5
 
 
 class ProviderError(Exception):
@@ -90,14 +103,28 @@ class Reply:
 class TextReplyClient:
     """Shared answer logic for providers that return text: parse, retry once, give up.
 
-    Subclasses implement ``send`` and raise ``ProviderError`` for provider failures.
+    Subclasses implement ``send`` and raise ``ProviderError`` for provider
+    failures. The SDKs' own retries are turned off, so this class alone
+    decides what is retried, and how long the analyst can be kept waiting.
     """
+
+    def __init__(self, *, sleep: Callable[[float], None] = time.sleep) -> None:
+        self._sleep = sleep
 
     def send(self, prompt: Prompt) -> Reply:
         raise NotImplementedError
 
+    def _send_with_retry(self, prompt: Prompt) -> Reply:
+        try:
+            return self.send(prompt)
+        except ProviderError as error:
+            if error.failure not in _TRANSIENT_FAILURES:
+                raise
+        self._sleep(_TRANSIENT_RETRY_DELAY_SECONDS)
+        return self.send(prompt)
+
     def answer(self, prompt: Prompt) -> LLMResult:
-        reply = self.send(prompt)
+        reply = self._send_with_retry(prompt)
         usage = reply.usage
         if reply.refused:
             raise InvalidModelOutputError("The model declined to answer.", usage)
@@ -106,7 +133,9 @@ class TextReplyClient:
         except InvalidAnswerError as first_error:
             # One retry, telling the model what was wrong: most format slips
             # are fixed by it, and a second failure rarely is by another.
-            retry = self.send(prompt.followed_by(*format_retry(reply.text, str(first_error))))
+            retry = self._send_with_retry(
+                prompt.followed_by(*format_retry(reply.text, str(first_error)))
+            )
             usage += retry.usage
             if retry.refused:
                 raise InvalidModelOutputError("The model declined to answer.", usage) from None

@@ -24,6 +24,7 @@ class ScriptedClient(TextReplyClient):
     """Returns prepared replies in order and records every prompt it was sent."""
 
     def __init__(self, *replies: Reply | ProviderError) -> None:
+        super().__init__(sleep=lambda _seconds: None)
         self._replies = list(replies)
         self.prompts: list[Prompt] = []
 
