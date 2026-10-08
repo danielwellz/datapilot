@@ -60,6 +60,12 @@ class AiQuery(Base):
     assumptions: Mapped[list[Any]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
+    @property
+    def shown_sql(self) -> str | None:
+        """What ran when something did; otherwise what the model wrote, so a
+        rejected question still shows the SQL that was refused."""
+        return self.executed_sql or self.generated_sql
+
     def __repr__(self) -> str:
         # Never the question or SQL: reprs end up in logs.
         return f"AiQuery(id={self.id!r}, status={self.status!r}, model={self.model!r})"

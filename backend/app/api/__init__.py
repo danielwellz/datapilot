@@ -7,6 +7,7 @@ the app factory registers it on every app it builds.
 
 from flask import Blueprint, Flask, request
 
+from app.api.ai import ai
 from app.api.analytics import analytics
 from app.api.auth import auth
 from app.api.docs import docs
@@ -18,6 +19,7 @@ from app.errors import BadRequest, UnsupportedMediaType
 _METHODS_WITH_BODY = frozenset({"POST", "PUT", "PATCH"})
 
 api = Blueprint("api", __name__, url_prefix="/api")
+api.register_blueprint(ai)
 api.register_blueprint(analytics)
 api.register_blueprint(auth)
 api.register_blueprint(docs)
