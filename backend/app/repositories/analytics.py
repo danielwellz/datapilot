@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import RowMapping
+from sqlalchemy import RowMapping, TextClause
 from sqlalchemy.orm import Session
 
 from app.analytics import queries
@@ -50,46 +50,31 @@ class AnalyticsRepository:
 
     def monthly_revenue(self, *, first_month: date, last_month: date) -> Sequence[RowMapping]:
         """One row per month, columns named as in ``MonthlyRevenueOut``."""
-        return (
-            self._session.execute(
-                queries.REVENUE_MONTHLY, {"first_month": first_month, "last_month": last_month}
-            )
-            .mappings()
-            .all()
-        )
+        return self._rows(queries.REVENUE_MONTHLY, first_month=first_month, last_month=last_month)
 
     def top_customers(
         self, *, start_at: datetime, end_at: datetime, country: str | None, limit: int
     ) -> Sequence[RowMapping]:
         """Ranked customers, columns named as in ``TopCustomerOut``."""
-        return (
-            self._session.execute(
-                queries.TOP_CUSTOMERS,
-                {"start_at": start_at, "end_at": end_at, "country": country, "limit": limit},
-            )
-            .mappings()
-            .all()
+        return self._rows(
+            queries.TOP_CUSTOMERS, start_at=start_at, end_at=end_at, country=country, limit=limit
         )
 
     def product_ranking(
         self, *, start_at: datetime, end_at: datetime, category: str | None, limit: int
     ) -> Sequence[RowMapping]:
         """Ranked products, columns named as in ``ProductRankOut``."""
-        return (
-            self._session.execute(
-                queries.PRODUCT_RANKING,
-                {"start_at": start_at, "end_at": end_at, "category": category, "limit": limit},
-            )
-            .mappings()
-            .all()
+        return self._rows(
+            queries.PRODUCT_RANKING,
+            start_at=start_at,
+            end_at=end_at,
+            category=category,
+            limit=limit,
         )
 
     def cohort_retention(self, *, first_month: date, last_month: date) -> Sequence[RowMapping]:
         """One row per cohort and month since signup, ordered by both."""
-        return (
-            self._session.execute(
-                queries.COHORTS, {"first_month": first_month, "last_month": last_month}
-            )
-            .mappings()
-            .all()
-        )
+        return self._rows(queries.COHORTS, first_month=first_month, last_month=last_month)
+
+    def _rows(self, query: TextClause, **parameters: object) -> Sequence[RowMapping]:
+        return self._session.execute(query, parameters).mappings().all()

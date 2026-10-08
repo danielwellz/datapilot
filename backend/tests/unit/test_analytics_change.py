@@ -12,7 +12,7 @@ from app.services.analytics import change
         (2, 3, Decimal("-0.3333")),
         (0, 90, Decimal("-1.0000")),
         (3, 3, Decimal("0.0000")),
-        # Half away from zero, like round() in PostgreSQL: 1/8 = 0.125.
+        # A change of exactly 0.00125 rounds half away from zero, as round() does in SQL.
         (Decimal("1.00125"), 1, Decimal("0.0013")),
         (Decimal("0.99875"), 1, Decimal("-0.0013")),
     ],

@@ -24,6 +24,9 @@ cohort_sizes AS (
 ),
 active_members AS (
     -- Each member at most once per month, however many orders they placed.
+    -- Only customer_id, created_at and status are read from orders, so the
+    -- partial index ix_orders_paid_customer_id_created_at answers the join
+    -- on its own; reading another order column would lose that.
     SELECT DISTINCT
         m.cohort_month,
         m.customer_id,

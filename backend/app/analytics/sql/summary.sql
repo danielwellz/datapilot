@@ -12,8 +12,8 @@ WITH customer_periods AS (
     -- One row per customer and period. Counting these rows replaces
     -- count(DISTINCT customer_id), which sorts every order in the range in
     -- a single process; this GROUP BY is split across parallel workers.
-    -- The key is a boolean rather than the period label because a
-    -- condition on a bind parameter keeps the plan parallel.
+    -- Grouping by the boolean, not by the period label, is what gave the
+    -- parallel plan when measured (docs/performance.md).
     SELECT
         customer_id,
         created_at >= :current_start                AS in_current,
