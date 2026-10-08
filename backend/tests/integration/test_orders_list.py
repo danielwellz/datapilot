@@ -183,7 +183,7 @@ def four_orders() -> dict[str, Row]:
         ({"date_from": "2025-03-01", "date_to": "2025-03-31"}, "ba"),
         ({"date_from": "2025-04-01"}, "c"),
         ({"date_to": "2025-02-28"}, "d"),
-        ({"date_to": "9999-12-31"}, "cbad"),
+        ({"date_from": "0001-01-01", "date_to": "9999-12-31"}, "cbad"),
         ({"min_total": "25.50"}, "cb"),
         ({"max_total": "25.50"}, "bad"),
         ({"min_total": "25.49", "max_total": "25.50"}, "bd"),
