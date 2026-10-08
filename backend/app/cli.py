@@ -1,7 +1,7 @@
 """Flask CLI commands, available as ``flask --app app <command>``."""
 
 import json
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +9,7 @@ import click
 from flask import Flask
 from flask.cli import with_appcontext
 
+from app import clock
 from app.api.spec import spec
 from app.extensions import db, get_redis
 from app.seed.calendar import history_start
@@ -31,6 +32,8 @@ def register_cli(app: Flask) -> None:
     type=click.Path(dir_okay=False, writable=True, path_type=Path),
     help="Write the document to this file instead of standard output.",
 )
+# The document is built from the routes of the current app, so it needs one.
+@with_appcontext
 def openapi_command(output: Path | None) -> None:
     """Export the OpenAPI document as JSON, for example to generate client types."""
     document: dict[str, Any] = spec.spec
@@ -68,7 +71,7 @@ def openapi_command(output: Path | None) -> None:
 def seed_command(scale: str, seed_value: int, end_date: datetime | None) -> None:
     """Replace the sales data with a generated dataset and create the demo account."""
     chosen = SCALES[scale]
-    end = end_date.date() if end_date is not None else utc_today()
+    end = end_date.date() if end_date is not None else clock.utc_today()
     click.echo(
         f"Seeding the {chosen.name} dataset ({chosen.orders:,} orders, seed {seed_value}).",
         err=True,
@@ -80,10 +83,6 @@ def seed_command(scale: str, seed_value: int, end_date: datetime | None) -> None
         on_progress=ProgressPrinter(chosen.orders),
     )
     click.echo(format_seed_report(report))
-
-
-def utc_today() -> date:
-    return datetime.now(UTC).date()
 
 
 class ProgressPrinter:

@@ -18,6 +18,7 @@ from app.seed.loader import (
     psycopg_connection,
     table_stats,
 )
+from app.services.cache import DATA_VERSION_KEY
 from app.services.passwords import PasswordHasher
 
 DEMO_EMAIL = "demo@datapilot.dev"
@@ -25,10 +26,6 @@ DEMO_EMAIL = "demo@datapilot.dev"
 # nothing but synthetic data.
 DEMO_PASSWORD = "DataPilot-demo-2026"  # noqa: S105
 DEMO_FULL_NAME = "Demo Analyst"
-
-# Bumped after every seed. Analytics caches put it in their keys, so a new
-# dataset never serves numbers cached from the old one.
-DATA_VERSION_KEY = "data_version"
 
 
 @dataclass(frozen=True, slots=True)

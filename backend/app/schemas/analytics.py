@@ -1,0 +1,225 @@
+"""Query strings and response bodies of the analytics endpoints.
+
+Periods are complete UTC days or months ending before today, so a period
+never contains a partial day and comparisons between periods are fair.
+"""
+
+from datetime import date
+from decimal import Decimal
+from typing import Annotated, Any
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    StringConstraints,
+    WithJsonSchema,
+)
+
+from app.models.product import CATEGORY_MAX_LENGTH
+from app.schemas.types import CountryCode, Money, UtcDatetime
+
+MAX_DAYS = 365
+MAX_REVENUE_MONTHS = 36
+MAX_RANK = 100
+MAX_COHORT_MONTHS = 24
+
+Ratio = Annotated[
+    Decimal,
+    # A JSON number: ratios are not money, and charts consume them directly.
+    PlainSerializer(float, return_type=float, when_used="json"),
+    WithJsonSchema({"type": "number", "examples": [0.1234]}),
+]
+"""A fraction rounded to four places: 0.1234 is 12.34%."""
+
+Change = Annotated[
+    Ratio | None,
+    Field(
+        description="Relative change against the previous period: 0.25 is +25%. "
+        "Null when the previous value is zero or unknown."
+    ),
+]
+
+CategoryName = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=CATEGORY_MAX_LENGTH)
+]
+"""A product category exactly as ``/api/meta`` lists it."""
+
+
+def _days_field(*, default: int) -> Any:
+    return Field(
+        default=default,
+        ge=1,
+        le=MAX_DAYS,
+        description="Length of the period in whole UTC days, ending yesterday.",
+    )
+
+
+class SummaryQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    days: int = _days_field(default=30)
+
+
+class RevenueMonthlyQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    months: int = Field(
+        default=24,
+        ge=1,
+        le=MAX_REVENUE_MONTHS,
+        description="Number of complete UTC calendar months, ending last month.",
+    )
+
+
+class TopCustomersQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    country: CountryCode | None = Field(
+        default=None, description="Only this country; every country when left out."
+    )
+    limit: int = Field(
+        default=10,
+        ge=1,
+        le=MAX_RANK,
+        description="The worst rank returned in each country. Ties share a rank, "
+        "so a country can return more customers than this.",
+    )
+    days: int = _days_field(default=365)
+
+
+class ProductRankingQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    category: CategoryName | None = Field(
+        default=None, description="Rank within this category only; every category when left out."
+    )
+    limit: int = Field(
+        default=20,
+        ge=1,
+        le=MAX_RANK,
+        description="The worst rank returned. Ties share a rank, "
+        "so more products than this can be returned.",
+    )
+    days: int = _days_field(default=365)
+
+
+class CohortsQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    months: int = Field(
+        default=12,
+        ge=1,
+        le=MAX_COHORT_MONTHS,
+        description="Number of monthly signup cohorts, the newest from last month.",
+    )
+
+
+class PeriodOut(BaseModel):
+    start_date: date = Field(description="First UTC day of the period.")
+    end_date: date = Field(description="Last UTC day of the period, included.")
+
+
+class MoneyMetricOut(BaseModel):
+    current: Money | None = Field(description="Null only for an average over no orders.")
+    previous: Money | None
+    change: Change
+
+
+class CountMetricOut(BaseModel):
+    current: int
+    previous: int
+    change: Change
+
+
+class RateMetricOut(BaseModel):
+    current: Ratio | None = Field(description="Null when the period has no orders.")
+    previous: Ratio | None
+    change: Change
+
+
+class SummaryOut(BaseModel):
+    """Headline numbers of a period, each compared with the period just before it."""
+
+    period: PeriodOut
+    previous_period: PeriodOut
+    revenue: MoneyMetricOut = Field(description="Total of paid orders.")
+    orders: CountMetricOut = Field(description="Paid orders.")
+    average_order_value: MoneyMetricOut = Field(description="Revenue divided by paid orders.")
+    active_customers: CountMetricOut = Field(description="Customers with at least one paid order.")
+    refund_rate: RateMetricOut = Field(
+        description="Refunded orders divided by all orders placed, in any status."
+    )
+
+
+class MonthlyRevenueOut(BaseModel):
+    month: date = Field(description="First day of the month.")
+    revenue: Money = Field(description="Total of paid orders; 0.00 for a month without sales.")
+    orders: int = Field(description="Paid orders.")
+    revenue_change_mom: Change = Field(description="Change against the month before.")
+    revenue_change_yoy: Change = Field(description="Change against the same month a year earlier.")
+    revenue_moving_average_3m: Money = Field(
+        description="Average revenue of this month and the two before it."
+    )
+
+
+class RevenueMonthlyOut(BaseModel):
+    """Revenue per month, oldest first, with every month present."""
+
+    items: list[MonthlyRevenueOut]
+
+
+class TopCustomerOut(BaseModel):
+    country: str
+    rank: int = Field(description="Rank by revenue within the country; ties share a rank.")
+    customer_id: int
+    name: str
+    revenue: Money = Field(description="Total of the customer's paid orders in the period.")
+    orders: int = Field(description="Paid orders in the period.")
+    last_order_at: UtcDatetime = Field(description="The customer's last paid order in the period.")
+
+
+class TopCustomersOut(BaseModel):
+    """Customers ranked by revenue within each country, by country and then rank."""
+
+    items: list[TopCustomerOut]
+
+
+class ProductRankOut(BaseModel):
+    rank: int = Field(description="Rank by revenue; ties share a rank.")
+    product_id: int
+    name: str
+    category: str
+    revenue: Money = Field(description="Paid revenue of the product's order lines.")
+    units: int = Field(description="Units sold in paid orders.")
+    category_share: Ratio | None = Field(
+        description="The product's share of its category's revenue; null if the category "
+        "earned nothing."
+    )
+
+
+class ProductRankingOut(BaseModel):
+    """Products ranked by revenue, best first."""
+
+    items: list[ProductRankOut]
+
+
+class CohortMonthOut(BaseModel):
+    months_since_signup: int = Field(description="0 is the signup month itself.")
+    active_customers: int = Field(description="Members with at least one paid order that month.")
+    retention_rate: Ratio = Field(description="Active customers divided by the cohort's size.")
+
+
+class CohortOut(BaseModel):
+    cohort_month: date = Field(description="First day of the month the members signed up in.")
+    customers: int = Field(description="Size of the cohort.")
+    retention: list[CohortMonthOut] = Field(
+        description="One entry per month from signup to last month, every month present."
+    )
+
+
+class CohortsOut(BaseModel):
+    """Monthly signup cohorts, oldest first; months without signups have no cohort."""
+
+    items: list[CohortOut]

@@ -1,9 +1,10 @@
 import json
+from collections import Counter
 from collections.abc import Iterator
 
 import pytest
 
-from scripts.bench_api import percentiles, run, with_cursor
+from scripts.bench_api import Reply, format_cache, percentiles, run, with_cursor
 
 
 def test_percentiles_of_one_to_a_hundred() -> None:
@@ -31,24 +32,25 @@ def test_run_fills_in_a_new_order_id_for_every_request() -> None:
     sent: list[str] = []
     ids: Iterator[int] = iter([7, 3, 9])
 
-    def send(path: str) -> tuple[int, bytes]:
+    def send(path: str) -> Reply:
         sent.append(path)
-        return 200, b"{}"
+        return Reply(200, b"{}")
 
-    latencies = run(send, "/api/orders/{order_id}", 3, pick_order_id=lambda: next(ids))
+    result = run(send, "/api/orders/{order_id}", 3, pick_order_id=lambda: next(ids))
 
     assert sent == ["/api/orders/7", "/api/orders/3", "/api/orders/9"]
-    assert len(latencies) == 3
-    assert all(latency >= 0 for latency in latencies)
+    assert len(result.latencies_ms) == 3
+    assert all(latency >= 0 for latency in result.latencies_ms)
+    assert result.cache == Counter()
 
 
 def test_run_follows_next_cursor_and_restarts_after_the_last_page() -> None:
     sent: list[str] = []
     cursors = iter(["c1", "c2", None, "c1"])
 
-    def send(path: str) -> tuple[int, bytes]:
+    def send(path: str) -> Reply:
         sent.append(path)
-        return 200, json.dumps({"items": [], "next_cursor": next(cursors)}).encode()
+        return Reply(200, json.dumps({"items": [], "next_cursor": next(cursors)}).encode())
 
     run(send, "/api/orders?limit=25", 4, follow_cursor=True)
 
@@ -61,8 +63,8 @@ def test_run_follows_next_cursor_and_restarts_after_the_last_page() -> None:
 
 
 def test_run_stops_at_the_first_failed_request() -> None:
-    def send(path: str) -> tuple[int, bytes]:
-        return 404, b'{"error": {"code": "not_found"}}'
+    def send(path: str) -> Reply:
+        return Reply(404, b'{"error": {"code": "not_found"}}')
 
     with pytest.raises(SystemExit, match="answered 404"):
         run(send, "/api/orders/{order_id}", 5, pick_order_id=lambda: 1)
@@ -76,8 +78,27 @@ def test_run_requires_an_id_picker_exactly_for_id_templates(
 ) -> None:
     with pytest.raises(ValueError, match="pick_order_id"):
         run(
-            lambda path: (200, b"{}"),
+            lambda path: Reply(200, b"{}"),
             template,
             1,
             pick_order_id=(lambda: 1) if has_picker else None,
         )
+
+
+def test_run_counts_cache_statuses_and_calls_the_hook_before_each_request() -> None:
+    events: list[str] = []
+    statuses = iter(["MISS", "HIT", "HIT"])
+
+    def send(path: str) -> Reply:
+        events.append("send")
+        return Reply(200, b"{}", next(statuses))
+
+    result = run(send, "/api/analytics/summary", 3, before_each=lambda: events.append("hook"))
+
+    assert events == ["hook", "send"] * 3
+    assert result.cache == Counter({"HIT": 2, "MISS": 1})
+
+
+def test_format_cache_lists_each_status_or_nothing() -> None:
+    assert format_cache(Counter({"MISS": 100, "BYPASS": 2})) == "; X-Cache BYPASS 2, MISS 100"
+    assert format_cache(Counter()) == ""

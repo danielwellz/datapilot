@@ -4,7 +4,14 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import AfterValidator, EmailStr, Field, PlainSerializer, WithJsonSchema
+from pydantic import (
+    AfterValidator,
+    EmailStr,
+    Field,
+    PlainSerializer,
+    StringConstraints,
+    WithJsonSchema,
+)
 
 # The largest value of a PostgreSQL bigint, the type of every primary key.
 MAX_DATABASE_ID = 2**63 - 1
@@ -50,3 +57,11 @@ Money = Annotated[
 DatabaseId = Annotated[int, Field(ge=1, le=MAX_DATABASE_ID)]
 """A primary key value in a request. Bounded, so an oversized number is a 422
 rather than an out-of-range error from the database."""
+
+CountryCode = Annotated[
+    str,
+    # The pattern runs before any case conversion, so it accepts both cases.
+    StringConstraints(strip_whitespace=True, pattern=r"^[A-Za-z]{2}$"),
+    AfterValidator(str.upper),
+]
+"""An ISO 3166-1 alpha-2 code in either case, normalized to uppercase."""

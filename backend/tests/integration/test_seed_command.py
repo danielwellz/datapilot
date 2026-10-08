@@ -1,5 +1,5 @@
 import itertools
-from datetime import UTC, date, datetime
+from datetime import date
 
 import pytest
 from flask import Flask
@@ -7,15 +7,15 @@ from redis import Redis
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, scoped_session
 
-from app import cli
+from app import clock
 from app.cli import ProgressPrinter, format_seed_report, format_size
 from app.models import Order, User
 from app.seed import generator
 from app.seed.generator import SCALES, SeedScale
 from app.seed.loader import TableStats
+from app.services.cache import DATA_VERSION_KEY
 from app.services.passwords import PasswordHasher
 from app.services.seeding import (
-    DATA_VERSION_KEY,
     DEMO_EMAIL,
     DEMO_PASSWORD,
     SeedReport,
@@ -143,20 +143,13 @@ def test_seed_command_loads_data_and_prints_the_report(
 def test_seed_command_ends_the_history_today_by_default(
     app: Flask, tiny_small_scale: SeedScale, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(cli, "utc_today", lambda: date(2026, 3, 1))
+    monkeypatch.setattr(clock, "utc_today", lambda: date(2026, 3, 1))
 
     result = app.test_cli_runner().invoke(args=["seed"])
 
     assert result.exit_code == 0, result.output
     assert "seed 42" in result.stderr
     assert "history 2023-03-01 to 2026-02-28" in result.stdout
-
-
-def test_utc_today_is_the_current_date_in_utc() -> None:
-    before = datetime.now(UTC).date()
-    today = cli.utc_today()
-
-    assert before <= today <= datetime.now(UTC).date()
 
 
 @pytest.mark.parametrize(

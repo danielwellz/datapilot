@@ -4,7 +4,8 @@ import pytest
 from sqlalchemy.orm import Session, scoped_session
 
 from app.models import OrderStatus
-from scripts.explain_orders import build_scenarios, measure, outline, render, summary_table
+from scripts.explain_orders import build_scenarios
+from scripts.plans import measure, outline, render, summary_table
 from tests.factories import create_customer, create_order, create_product
 
 
