@@ -27,6 +27,6 @@ def run_as_readonly(db_session: scoped_session[Session]) -> RunAsReadonly:
             # no placeholder parsing, so "%" in LIKE patterns stays literal.
             driver = db_session.connection().connection.driver_connection
             assert driver is not None
-            return [tuple(row) for row in driver.execute(sql).fetchall()]
+            return [tuple(row) for row in driver.execute(sql, binary=True).fetchall()]
 
     return run
