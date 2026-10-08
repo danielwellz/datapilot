@@ -9,12 +9,12 @@ FLASK_PORT := 5001
 # Defaults for `make seed`; override on the command line: make seed scale=full
 scale ?= small
 seed ?= 42
-# Measured runs per scenario for `make explain`.
+# Measured runs per scenario for `make explain` and `make explain-analytics`.
 runs ?= 10
 
 .PHONY: help up down logs reset-db \
 	be-install be-dev be-test be-lint be-format be-typecheck \
-	db-migrate db-upgrade seed explain \
+	db-migrate db-upgrade seed explain explain-analytics \
 	fe-install fe-dev fe-test fe-lint fe-build \
 	hooks check demo
 
@@ -71,6 +71,9 @@ seed: ## Load sales data: make seed scale=small|full [seed=42]
 
 explain: ## EXPLAIN ANALYZE the orders queries on the dev database: make explain [runs=10]
 	cd $(BACKEND) && uv run python -m scripts.explain_orders --runs $(runs)
+
+explain-analytics: ## EXPLAIN ANALYZE the analytics queries: make explain-analytics [runs=10]
+	cd $(BACKEND) && uv run python -m scripts.explain_analytics --runs $(runs)
 
 # --- Frontend -------------------------------------------------------------
 
