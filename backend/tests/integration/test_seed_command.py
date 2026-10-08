@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, scoped_session
 
 from app import cli
-from app.cli import ProgressPrinter, format_seed_report
+from app.cli import ProgressPrinter, format_seed_report, format_size
 from app.models import Order, User
 from app.seed import generator
 from app.seed.generator import SCALES, SeedScale
@@ -196,6 +196,7 @@ def test_seed_report_lists_every_table_with_rows_and_size() -> None:
         end_date=date(2026, 10, 8),
         tables=[
             TableStats("customers", 50_000, 9_240_576),
+            TableStats("products", 1_000, 122_880),
             TableStats("order_items", 4_478_509, 420_241_408),
         ],
         demo_account_created=False,
@@ -208,8 +209,17 @@ def test_seed_report_lists_every_table_with_rows_and_size() -> None:
         "",
         "  table               rows       size",
         "  customers         50,000     8.8 MB",
+        "  products           1,000     120 kB",
         "  order_items    4,478,509   400.8 MB",
         "",
         f"Demo account {DEMO_EMAIL}: already existed, left unchanged.",
         "Data version: 12.",
     ]
+
+
+@pytest.mark.parametrize(
+    ("size_bytes", "expected"),
+    [(0, "0 kB"), (24_576, "24 kB"), (9_240_576, "8.8 MB"), (3 * 1024**3, "3.00 GB")],
+)
+def test_sizes_are_formatted_in_binary_units(size_bytes: int, expected: str) -> None:
+    assert format_size(size_bytes) == expected

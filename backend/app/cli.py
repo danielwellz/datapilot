@@ -16,7 +16,7 @@ from app.seed.generator import SCALES
 from app.services.passwords import PasswordHasher
 from app.services.seeding import DEMO_EMAIL, SeedReport, SeedService
 
-_BYTES_PER_MB = 1024 * 1024
+_KIB = 1024
 
 
 def register_cli(app: Flask) -> None:
@@ -110,7 +110,7 @@ def format_seed_report(report: SeedReport) -> str:
         "",
         f"  {'table':<12} {'rows':>11} {'size':>10}",
         *(
-            f"  {stats.table:<12} {stats.rows:>11,} {stats.total_bytes / _BYTES_PER_MB:>7.1f} MB"
+            f"  {stats.table:<12} {stats.rows:>11,} {format_size(stats.total_bytes):>10}"
             for stats in report.tables
         ),
         "",
@@ -118,3 +118,12 @@ def format_seed_report(report: SeedReport) -> str:
         f"Data version: {report.data_version}.",
     ]
     return "\n".join(lines)
+
+
+def format_size(size_bytes: int) -> str:
+    """Binary units, as PostgreSQL's pg_size_pretty uses: 24576 -> "24 kB"."""
+    if size_bytes < _KIB * _KIB:
+        return f"{size_bytes / _KIB:.0f} kB"
+    if size_bytes < _KIB**3:
+        return f"{size_bytes / _KIB**2:.1f} MB"
+    return f"{size_bytes / _KIB**3:.2f} GB"

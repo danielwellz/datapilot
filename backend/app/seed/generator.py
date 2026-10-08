@@ -30,7 +30,13 @@ from random import Random
 from typing import NamedTuple
 
 from app.models import OrderChannel, OrderStatus
-from app.seed.calendar import DAYS_PER_YEAR, HOUR_WEIGHTS, YEARLY_GROWTH, daily_order_counts
+from app.seed.calendar import (
+    DAYS_PER_YEAR,
+    HOUR_WEIGHTS,
+    YEARLY_GROWTH,
+    OrderDay,
+    daily_order_counts,
+)
 from app.seed.reference import (
     CATEGORIES,
     COUNTRY_WEIGHTS,
@@ -146,7 +152,7 @@ def generate_sales_data(scale: SeedScale, seed: int, end_date: date) -> SalesDat
     products, popularity = _generate_products(rng, scale.products)
     orders = _generate_orders(
         rng,
-        calendar=[(entry.day, entry.orders) for entry in calendar],
+        calendar=calendar,
         customers=customers,
         customer_picker=WeightedPicker(customers, activity),
         product_picker=WeightedPicker(products, popularity),
@@ -221,7 +227,7 @@ def _generate_products(rng: Random, count: int) -> tuple[list[ProductRow], list[
 def _generate_orders(
     rng: Random,
     *,
-    calendar: list[tuple[date, int]],
+    calendar: list[OrderDay],
     customers: list[CustomerRow],
     customer_picker: WeightedPicker[CustomerRow],
     product_picker: WeightedPicker[ProductRow],
@@ -232,19 +238,19 @@ def _generate_orders(
     signups = [customer.signed_up_at for customer in customers]
     order_id = 0
 
-    for day_number, (day, order_count) in enumerate(calendar):
-        day_start = _midnight(day)
+    for day_number, entry in enumerate(calendar):
+        day_start = _midnight(entry.day)
         # Only customers who signed up before the day can order on it.
         signed_up = bisect(signups, day_start)
-        if order_count and not signed_up:
-            raise ValueError(f"no customer had signed up by {day}")
+        if entry.orders and not signed_up:
+            raise ValueError(f"no customer had signed up by {entry.day}")
         mobile_share = MOBILE_SHARE_AT_START + (MOBILE_SHARE_AT_END - MOBILE_SHARE_AT_START) * (
             day_number / len(calendar)
         )
         # Sorted times make order ids grow with created_at, as identity ids do.
         seconds = sorted(
             hour_picker.pick(rng) * SECONDS_PER_HOUR + int(rng.random() * SECONDS_PER_HOUR)
-            for _ in range(order_count)
+            for _ in range(entry.orders)
         )
 
         for second in seconds:
