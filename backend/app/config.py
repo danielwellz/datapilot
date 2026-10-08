@@ -1,13 +1,16 @@
 """Application settings, loaded from environment variables."""
 
+import os
+import re
 from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal, Self
+from typing import Annotated, Any, Literal, Self
 
+from dotenv import dotenv_values
 from flask import current_app
 from pydantic import (
-    Field,
+    FilePath,
     PositiveInt,
     PostgresDsn,
     RedisDsn,
@@ -15,7 +18,13 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic.fields import FieldInfo
+from pydantic_settings import (
+    BaseSettings,
+    NoDecode,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 from sqlalchemy.engine import make_url
 
 # The repository root, so the same .env is found whether the process starts
@@ -29,6 +38,10 @@ _MIN_PRODUCTION_SECRET_LENGTH = 32
 # output. Shorter keys are brute-forceable offline from any issued token.
 _MIN_JWT_SECRET_LENGTH = 32
 _PLACEHOLDER_MARKER = "change-me"
+
+# Provider API keys follow one naming rule, so the model registry can name the
+# variable for each provider without a matching field here (see ApiKeysSource).
+API_KEY_ENV_PATTERN = re.compile(r"[A-Z][A-Z0-9_]*_API_KEY")
 
 AppEnv = Literal["development", "test", "production"]
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -67,19 +80,50 @@ class Settings(BaseSettings):
 
     log_level: LogLevel = "INFO"
 
-    llm_provider: Literal["anthropic", "fake"] = "fake"
-    anthropic_api_key: SecretStr | None = None
-    llm_model: str = Field(default="claude-sonnet-5", min_length=1)
+    # Model registry ids; validated against the registry when the app starts.
+    llm_default_model: str | None = None
+    llm_fallback_models: Annotated[tuple[str, ...], NoDecode] = ()
+    # A replacement for the registry that ships with the backend.
+    llm_models_file: FilePath | None = None
+    # Every *_API_KEY variable, by name; the registry says which provider uses which.
+    llm_api_keys: dict[str, SecretStr] = {}
     llm_timeout_seconds: PositiveInt = 30
+    # Generous, because some models reason at length before answering.
+    llm_max_output_tokens: PositiveInt = 8192
     ai_rate_limit_per_minute: PositiveInt = 10
     ai_max_rows: PositiveInt = 1000
     ai_statement_timeout_ms: PositiveInt = 5000
 
-    @field_validator("anthropic_api_key", mode="before")
     @classmethod
-    def _empty_key_means_none(cls, value: object) -> object:
-        # An empty ANTHROPIC_API_KEY= line in .env means "no key", not a key.
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            init_settings,
+            ApiKeysSource(settings_cls),
+            env_settings,
+            dotenv_settings,
+            file_secret_settings,
+        )
+
+    @field_validator("llm_default_model", "llm_models_file", mode="before")
+    @classmethod
+    def _empty_means_unset(cls, value: object) -> object:
+        # An empty LLM_DEFAULT_MODEL= line in .env means "not set".
         return None if value == "" else value
+
+    @field_validator("llm_fallback_models", mode="before")
+    @classmethod
+    def _split_model_list(cls, value: object) -> object:
+        # Written as a comma-separated list in the environment.
+        if isinstance(value, str):
+            return tuple(item.strip() for item in value.split(",") if item.strip())
+        return value
 
     @field_validator("jwt_secret_key")
     @classmethod
@@ -136,3 +180,29 @@ def current_settings() -> Settings:
     """Return the settings of the application serving the current request or command."""
     settings: Settings = current_app.extensions[SETTINGS_EXTENSION_KEY]
     return settings
+
+
+class ApiKeysSource(PydanticBaseSettingsSource):
+    """Collects every non-empty ``*_API_KEY`` variable into ``llm_api_keys``.
+
+    The model registry names the variable holding each provider's key, so a
+    new provider is a registry entry rather than a new settings field. The
+    process environment wins over .env, as for every other setting.
+    """
+
+    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
+        # Unused: __call__ builds the one field this source provides.
+        return None, field_name, False
+
+    def __call__(self) -> dict[str, Any]:
+        env_file = self.config.get("env_file")
+        from_file: dict[str, str | None] = {}
+        if isinstance(env_file, Path) and env_file.is_file():
+            from_file = dotenv_values(env_file)
+        candidates = {**from_file, **os.environ}
+        keys = {
+            name: value
+            for name, value in candidates.items()
+            if value and API_KEY_ENV_PATTERN.fullmatch(name)
+        }
+        return {"llm_api_keys": keys} if keys else {}
