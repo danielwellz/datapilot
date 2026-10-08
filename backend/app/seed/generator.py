@@ -73,6 +73,15 @@ class SeedScale:
     products: int
     orders: int
 
+    def __post_init__(self) -> None:
+        # Fewer products than the largest order could never fill that order
+        # with distinct products, and the item loop would never finish.
+        if self.customers < 1 or self.products < max(ITEM_COUNT_WEIGHTS) or self.orders < 0:
+            raise ValueError(
+                f"a scale needs at least 1 customer, {max(ITEM_COUNT_WEIGHTS)} products "
+                "and a non-negative number of orders"
+            )
+
 
 SCALES = {
     scale.name: scale

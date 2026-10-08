@@ -66,6 +66,22 @@ def test_scales_have_the_documented_sizes() -> None:
     assert SCALES["full"] == SeedScale("full", customers=50_000, products=1_000, orders=2_000_000)
 
 
+@pytest.mark.parametrize(
+    ("customers", "products", "orders"), [(0, 30, 10), (10, 4, 10), (10, 30, -1)]
+)
+def test_scales_too_small_for_valid_orders_are_rejected(
+    customers: int, products: int, orders: int
+) -> None:
+    with pytest.raises(ValueError, match="at least 1 customer, 5 products"):
+        SeedScale("broken", customers=customers, products=products, orders=orders)
+
+
+def test_a_catalog_of_five_products_still_fills_the_largest_orders() -> None:
+    data = generate_sales_data(SeedScale("five", 50, 5, 500), seed=5, end_date=END_DATE)
+
+    assert max(len(order.items) for order in data.orders) == 5
+
+
 def test_row_counts_match_the_scale(small: tuple[SalesData, list[GeneratedOrder]]) -> None:
     data, orders = small
     item_count = sum(len(order.items) for order in orders)
