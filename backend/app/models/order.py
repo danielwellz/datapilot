@@ -12,6 +12,7 @@ from sqlalchemy import (
     CheckConstraint,
     ForeignKey,
     Identity,
+    Index,
     Integer,
     Numeric,
     Text,
@@ -60,6 +61,11 @@ class Order(Base):
         CheckConstraint(_one_of("status", OrderStatus), name="status_allowed"),
         CheckConstraint(_one_of("channel", OrderChannel), name="channel_allowed"),
         CheckConstraint("total >= 0", name="total_non_negative"),
+        # One per query shape of the orders list, each ending in id for keyset
+        # pagination; docs/performance.md shows the plans that use them.
+        Index("ix_orders_created_at_id", "created_at", "id"),
+        Index("ix_orders_total_id", "total", "id"),
+        Index("ix_orders_customer_id_created_at_id", "customer_id", "created_at", "id"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
