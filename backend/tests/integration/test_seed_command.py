@@ -13,9 +13,9 @@ from app.models import Order, User
 from app.seed import generator
 from app.seed.generator import SCALES, SeedScale
 from app.seed.loader import TableStats
+from app.services.cache import DATA_VERSION_KEY
 from app.services.passwords import PasswordHasher
 from app.services.seeding import (
-    DATA_VERSION_KEY,
     DEMO_EMAIL,
     DEMO_PASSWORD,
     SeedReport,
