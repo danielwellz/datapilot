@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, WithJsonSche
 from app.schemas.types import Money
 
 MAX_DAYS = 365
+MAX_REVENUE_MONTHS = 36
 
 Ratio = Annotated[
     Decimal,
@@ -39,6 +40,17 @@ class SummaryQuery(BaseModel):
         ge=1,
         le=MAX_DAYS,
         description="Length of the period in whole UTC days, ending yesterday.",
+    )
+
+
+class RevenueMonthlyQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    months: int = Field(
+        default=24,
+        ge=1,
+        le=MAX_REVENUE_MONTHS,
+        description="Number of complete UTC calendar months, ending last month.",
     )
 
 
@@ -77,3 +89,20 @@ class SummaryOut(BaseModel):
     refund_rate: RateMetricOut = Field(
         description="Refunded orders divided by all orders placed, in any status."
     )
+
+
+class MonthlyRevenueOut(BaseModel):
+    month: date = Field(description="First day of the month.")
+    revenue: Money = Field(description="Total of paid orders; 0.00 for a month without sales.")
+    orders: int = Field(description="Paid orders.")
+    revenue_change_mom: Change = Field(description="Change against the month before.")
+    revenue_change_yoy: Change = Field(description="Change against the same month a year earlier.")
+    revenue_moving_average_3m: Money = Field(
+        description="Average revenue of this month and the two before it."
+    )
+
+
+class RevenueMonthlyOut(BaseModel):
+    """Revenue per month, oldest first, with every month present."""
+
+    items: list[MonthlyRevenueOut]

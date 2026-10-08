@@ -1,9 +1,11 @@
 """Runs the analytics SQL in ``app/analytics/sql`` with bound parameters."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
+from sqlalchemy import RowMapping
 from sqlalchemy.orm import Session
 
 from app.analytics import queries
@@ -45,3 +47,13 @@ class AnalyticsRepository:
             for row in rows
         }
         return by_period.get("current", PeriodTotals()), by_period.get("previous", PeriodTotals())
+
+    def monthly_revenue(self, *, first_month: date, last_month: date) -> Sequence[RowMapping]:
+        """One row per month, columns named as in ``MonthlyRevenueOut``."""
+        return (
+            self._session.execute(
+                queries.REVENUE_MONTHLY, {"first_month": first_month, "last_month": last_month}
+            )
+            .mappings()
+            .all()
+        )

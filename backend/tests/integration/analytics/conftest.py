@@ -9,6 +9,8 @@ from datetime import UTC, date, datetime
 import pytest
 
 from app import clock
+from app.models import Customer, Order, OrderStatus
+from tests.factories import create_order, create_product
 
 TODAY = date(2026, 3, 15)
 
@@ -22,3 +24,15 @@ def pinned_today(monkeypatch: pytest.MonkeyPatch) -> date:
 def at(day: str, clock: str = "12:00:00") -> datetime:
     """A UTC instant from ISO text: ``at("2026-03-14", "23:59:59")``."""
     return datetime.fromisoformat(f"{day}T{clock}").replace(tzinfo=UTC)
+
+
+def sale(
+    customer: Customer,
+    amount: str,
+    created_at: datetime,
+    status: OrderStatus = OrderStatus.PAID,
+) -> Order:
+    """One order of a single item whose total is ``amount``."""
+    return create_order(
+        customer, [(create_product(price=amount), 1)], status=status, created_at=created_at
+    )

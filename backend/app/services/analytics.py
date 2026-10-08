@@ -9,11 +9,13 @@ from app.repositories.analytics import AnalyticsRepository, PeriodTotals
 from app.schemas.analytics import (
     CountMetricOut,
     MoneyMetricOut,
+    MonthlyRevenueOut,
     PeriodOut,
     RateMetricOut,
+    RevenueMonthlyOut,
     SummaryOut,
 )
-from app.services.periods import DayRange, preceding_days, trailing_days
+from app.services.periods import DayRange, preceding_days, trailing_days, trailing_months
 
 _CENT = Decimal("0.01")
 # Matches round(x, 4) in the SQL files: half away from zero, four places.
@@ -72,6 +74,16 @@ class AnalyticsService:
                 previous=_round(previous_rate, _RATIO_PLACES),
                 change=change(rate, previous_rate),
             ),
+        )
+
+    def revenue_monthly(self, months: int, *, today: date) -> RevenueMonthlyOut:
+        """Revenue of the ``months`` complete calendar months before the month of ``today``."""
+        period = trailing_months(today, months)
+        rows = self._analytics.monthly_revenue(
+            first_month=period.first_month, last_month=period.last_month
+        )
+        return RevenueMonthlyOut(
+            items=[MonthlyRevenueOut.model_validate(dict(row)) for row in rows]
         )
 
 
