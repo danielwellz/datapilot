@@ -6,6 +6,10 @@ BACKEND := backend
 # Flask's default port 5000 is taken by AirPlay Receiver on macOS.
 FLASK_PORT := 5001
 
+# Defaults for `make seed`; override on the command line: make seed scale=full
+scale ?= small
+seed ?= 42
+
 .PHONY: help up down logs reset-db \
 	be-install be-dev be-test be-lint be-format be-typecheck \
 	db-migrate db-upgrade seed \
@@ -60,8 +64,8 @@ db-migrate: ## Autogenerate a migration: make db-migrate m="message"
 db-upgrade: ## Apply migrations to the development database
 	cd $(BACKEND) && uv run flask --app app db upgrade
 
-seed: ## Load sales data: make seed scale=small|full
-	@echo "seed is available from Stage 3 (sales data model and seed)."
+seed: ## Load sales data: make seed scale=small|full [seed=42]
+	cd $(BACKEND) && uv run flask --app app seed --scale $(scale) --seed $(seed)
 
 # --- Frontend -------------------------------------------------------------
 
