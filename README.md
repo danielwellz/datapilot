@@ -38,6 +38,8 @@ Seeding also creates a demo account: `demo@datapilot.dev` with the password `Dat
 
 On the full dataset, every measured orders list and detail request has a p95 under 15 ms, at any page depth. [docs/performance.md](docs/performance.md) has the measurements before and after indexing, the query plans, and the reasoning behind each index. `make explain` runs the EXPLAIN scenarios again on your database. Pagination uses signed keyset cursors ([ADR 0005](docs/adr/0005-keyset-pagination.md)).
 
+The analytics endpoints (`/api/analytics/summary`, `revenue-monthly`, `top-customers`, `products`, `cohorts`) answer from a Redis cache in under 10 ms at p95, and in under 425 ms uncached. `make explain-analytics` shows their plans. The SQL and the cache design are in [ADR 0006](docs/adr/0006-analytics-sql-and-caching.md).
+
 ## License
 
 [MIT](LICENSE)
