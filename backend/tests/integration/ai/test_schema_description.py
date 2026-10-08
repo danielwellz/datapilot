@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, scoped_session
 from app.ai.prompt import FEW_SHOT_EXAMPLES
 from app.ai.schema_description import SchemaDescriptionError, describe_analytics_views
 from app.ai.sql_guard import guard_sql
+from tests.integration.ai.conftest import RunAsReadonly
 
 
 def test_description_lists_every_view_with_typed_commented_columns(
@@ -36,13 +37,8 @@ def test_description_fails_clearly_when_the_views_are_missing(
     [example.answer.sql for example in FEW_SHOT_EXAMPLES if example.answer.sql],
 )
 def test_few_shot_queries_run_on_postgresql_as_the_readonly_role(
-    db_session: scoped_session[Session], sql: str
+    run_as_readonly: RunAsReadonly, sql: str
 ) -> None:
     guarded = guard_sql(sql, max_rows=1000)
 
-    with db_session.begin_nested():
-        db_session.execute(text("SET LOCAL ROLE datapilot_readonly"))
-        db_session.execute(text("SET LOCAL search_path = analytics"))
-        driver = db_session.connection().connection.driver_connection
-        assert driver is not None
-        driver.execute(guarded.sql).fetchall()
+    run_as_readonly(guarded.sql)
