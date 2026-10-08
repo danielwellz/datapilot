@@ -40,6 +40,17 @@ On the full dataset, every measured orders list and detail request has a p95 und
 
 The analytics endpoints (`/api/analytics/summary`, `revenue-monthly`, `top-customers`, `products`, `cohorts`) answer from a Redis cache in under 10 ms at p95, and in under 425 ms uncached. `make explain-analytics` shows their plans. The SQL and the cache design are in [ADR 0006](docs/adr/0006-analytics-sql-and-caching.md).
 
+### Ask your data
+
+`POST /api/ai/ask` answers a question in plain English with a read-only SQL query written by a language model, and returns the SQL, a short explanation, the rows and a suggested chart. The model is chosen per question from a registry (`backend/app/ai/llm_models.toml`): Groq, Google Gemini and OpenRouter through their OpenAI-compatible APIs, and Anthropic. A provider is offered once its API key is set in `.env`. Without any key, a deterministic demo model answers the example questions (`GET /api/ai/examples`), so the feature works offline.
+
+```bash
+make db-upgrade
+make db-roles    # gives the read-only role its password from READONLY_DATABASE_URL
+```
+
+Model output is treated as untrusted input, whichever model wrote it. The SQL only ever reads four curated views without personal data. It must pass a parser-based guard, runs as a read-only database role in a read-only transaction with a statement timeout and a row limit, and gets at most one repair attempt; every question is audited. [ADR 0007](docs/adr/0007-text-to-sql-safety.md) describes each layer. `make eval-ask` runs 15 golden questions against the enabled models and writes the comparison to [docs/ai-evaluation.md](docs/ai-evaluation.md): on 2026-10-08, GPT-OSS 120B and Gemini 3.5 Flash-Lite answered all 15 correctly and Qwen3.8 27B 12.
+
 ## License
 
 [MIT](LICENSE)
