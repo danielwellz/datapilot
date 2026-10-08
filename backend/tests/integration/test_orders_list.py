@@ -367,6 +367,25 @@ def test_a_cursor_accepts_the_same_statuses_in_another_order(
     assert response.status_code == 200
 
 
+@pytest.mark.parametrize(("first", "then"), [("20", "20.00"), ("20.5", "20.50"), ("0", "0.00")])
+def test_a_cursor_accepts_the_same_total_bound_written_differently(
+    client: FlaskClient,
+    auth_headers: dict[str, str],
+    tied_orders: list[Row],
+    first: str,
+    then: str,
+) -> None:
+    page = get_page(client, auth_headers, {"min_total": first, "limit": "2"})
+
+    response = client.get(
+        URL,
+        headers=auth_headers,
+        query_string={"min_total": then, "limit": "2", "cursor": page["next_cursor"]},
+    )
+
+    assert response.status_code == 200
+
+
 def assert_invalid_cursor(response: Any) -> None:
     assert response.status_code == 400
     error = response.get_json()["error"]

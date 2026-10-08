@@ -20,6 +20,8 @@ from app.services.cursors import CursorSigner, InvalidCursor
 
 CURSOR_PURPOSE = "datapilot.orders-cursor"
 
+_CENT = Decimal("0.01")
+
 
 class _CursorPayload(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -113,7 +115,8 @@ def filters_from_query(query: OrderListQuery) -> OrderFilters:
 
     Calendar days become half-open UTC instants: ``date_to`` includes its
     whole day, up to but excluding midnight of the next. Statuses are
-    deduplicated and sorted, so equivalent queries share a cursor fingerprint.
+    deduplicated and sorted, and totals brought to two decimal places, so
+    equivalent queries share a cursor fingerprint ("20" and "20.00" alike).
     """
     return OrderFilters(
         statuses=tuple(sorted(set(query.status))),
@@ -122,9 +125,14 @@ def filters_from_query(query: OrderListQuery) -> OrderFilters:
         channel=query.channel,
         created_from=None if query.date_from is None else _start_of_utc_day(query.date_from),
         created_before=None if query.date_to is None else _start_of_next_utc_day(query.date_to),
-        min_total=query.min_total,
-        max_total=query.max_total,
+        min_total=None if query.min_total is None else _to_cents(query.min_total),
+        max_total=None if query.max_total is None else _to_cents(query.max_total),
     )
+
+
+def _to_cents(amount: Decimal) -> Decimal:
+    # Exact: the query schema allows at most two decimal places.
+    return amount.quantize(_CENT)
 
 
 def _start_of_utc_day(day: date) -> datetime:

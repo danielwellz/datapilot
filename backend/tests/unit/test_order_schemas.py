@@ -77,3 +77,10 @@ def test_statuses_are_deduplicated_and_sorted() -> None:
     )
 
     assert filters_from_query(query).statuses == (OrderStatus.CANCELLED, OrderStatus.REFUNDED)
+
+
+def test_total_bounds_are_brought_to_two_decimal_places() -> None:
+    filters = filters_from_query(OrderListQuery(min_total=Decimal("20"), max_total=Decimal("20.5")))
+
+    assert str(filters.min_total) == "20.00"
+    assert str(filters.max_total) == "20.50"
