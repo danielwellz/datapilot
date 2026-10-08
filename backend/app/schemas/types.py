@@ -1,6 +1,7 @@
 """Field types shared by request and response schemas."""
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Annotated
 
 from pydantic import AfterValidator, EmailStr, PlainSerializer, WithJsonSchema
@@ -29,3 +30,16 @@ Lowercasing the local part is technically lossy (RFC 5321 lets servers treat
 it as case-sensitive), but no mainstream provider does, and treating
 Ana@x.dev and ana@x.dev as two accounts would be far more surprising.
 """
+
+
+def _to_money_string(value: Decimal) -> str:
+    return f"{value:.2f}"
+
+
+Money = Annotated[
+    Decimal,
+    # A JSON number would pass through a float in most clients and lose cents.
+    PlainSerializer(_to_money_string, return_type=str, when_used="json"),
+    WithJsonSchema({"type": "string", "pattern": r"^-?\d+\.\d{2}$", "examples": ["1234.50"]}),
+]
+"""An amount of money, serialized in JSON as a decimal string with two places ("1234.50")."""

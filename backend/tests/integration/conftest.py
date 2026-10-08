@@ -20,6 +20,8 @@ from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from app.config import Settings
 from app.extensions import db, get_redis
+from tests.factories import create_user
+from tests.tokens import access_token_for, bearer
 
 
 @pytest.fixture(scope="session")
@@ -65,3 +67,9 @@ def redis_client(app: Flask, settings: Settings) -> Iterator[Redis]:
     client.flushdb()
     yield client
     client.flushdb()
+
+
+@pytest.fixture
+def auth_headers(app: Flask) -> dict[str, str]:
+    """An Authorization header for a freshly created analyst."""
+    return bearer(access_token_for(app, create_user()))
