@@ -8,6 +8,8 @@ from app.api.security import BEARER_AUTH, require_access_token
 from app.api.spec import spec
 from app.extensions import db
 from app.schemas.analytics import (
+    CohortsOut,
+    CohortsQuery,
     ProductRankingOut,
     ProductRankingQuery,
     RevenueMonthlyOut,
@@ -99,3 +101,22 @@ def product_ranking(query: ProductRankingQuery) -> ProductRankingOut:
     `category`, products are ranked within that category. Ties share a rank.
     """
     return _service().product_ranking(query, today=clock.utc_today())
+
+
+@analytics.get("/cohorts")
+@spec.validate(
+    query=CohortsQuery,
+    resp=Response(HTTP_200=CohortsOut, HTTP_401=ErrorOut, HTTP_422=ErrorOut),
+    tags=_TAGS,
+    security=BEARER_AUTH,
+)
+@require_access_token
+def cohorts(query: CohortsQuery) -> CohortsOut:
+    """Customer retention by signup month.
+
+    Customers who signed up in the same UTC month form a cohort. For each
+    month since signup, up to last month, the share of the cohort that
+    placed at least one paid order. Covers the `months` cohorts ending
+    last month.
+    """
+    return _service().cohorts(query, today=clock.utc_today())

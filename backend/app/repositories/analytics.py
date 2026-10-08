@@ -83,3 +83,13 @@ class AnalyticsRepository:
             .mappings()
             .all()
         )
+
+    def cohort_retention(self, *, first_month: date, last_month: date) -> Sequence[RowMapping]:
+        """One row per cohort and month since signup, ordered by both."""
+        return (
+            self._session.execute(
+                queries.COHORTS, {"first_month": first_month, "last_month": last_month}
+            )
+            .mappings()
+            .all()
+        )

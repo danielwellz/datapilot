@@ -23,6 +23,7 @@ from app.schemas.types import CountryCode, Money, UtcDatetime
 MAX_DAYS = 365
 MAX_REVENUE_MONTHS = 36
 MAX_RANK = 100
+MAX_COHORT_MONTHS = 24
 
 Ratio = Annotated[
     Decimal,
@@ -102,6 +103,17 @@ class ProductRankingQuery(BaseModel):
         "so more products than this can be returned.",
     )
     days: int = _days_field(default=365)
+
+
+class CohortsQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    months: int = Field(
+        default=12,
+        ge=1,
+        le=MAX_COHORT_MONTHS,
+        description="Number of monthly signup cohorts, the newest from last month.",
+    )
 
 
 class PeriodOut(BaseModel):
@@ -191,3 +203,23 @@ class ProductRankingOut(BaseModel):
     """Products ranked by revenue, best first."""
 
     items: list[ProductRankOut]
+
+
+class CohortMonthOut(BaseModel):
+    months_since_signup: int = Field(description="0 is the signup month itself.")
+    active_customers: int = Field(description="Members with at least one paid order that month.")
+    retention_rate: Ratio = Field(description="Active customers divided by the cohort's size.")
+
+
+class CohortOut(BaseModel):
+    cohort_month: date = Field(description="First day of the month the members signed up in.")
+    customers: int = Field(description="Size of the cohort.")
+    retention: list[CohortMonthOut] = Field(
+        description="One entry per month from signup to last month, every month present."
+    )
+
+
+class CohortsOut(BaseModel):
+    """Monthly signup cohorts, oldest first; months without signups have no cohort."""
+
+    items: list[CohortOut]

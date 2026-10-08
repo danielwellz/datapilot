@@ -27,6 +27,7 @@ SUMMARY = _load("summary")
 REVENUE_MONTHLY = _load("revenue_monthly")
 TOP_CUSTOMERS = _load("top_customers")
 PRODUCT_RANKING = _load("product_ranking")
+COHORTS = _load("cohorts")
 
 LOADED: Mapping[str, TextClause] = MappingProxyType(_loaded)
 """Every loaded query by file name, so a test can prove no file is left unused."""

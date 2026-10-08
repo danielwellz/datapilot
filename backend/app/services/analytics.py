@@ -2,11 +2,16 @@
 
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
+from itertools import groupby
 
 from sqlalchemy.orm import Session
 
 from app.repositories.analytics import AnalyticsRepository, PeriodTotals
 from app.schemas.analytics import (
+    CohortMonthOut,
+    CohortOut,
+    CohortsOut,
+    CohortsQuery,
     CountMetricOut,
     MoneyMetricOut,
     MonthlyRevenueOut,
@@ -115,6 +120,25 @@ class AnalyticsService:
             limit=query.limit,
         )
         return ProductRankingOut(items=[ProductRankOut.model_validate(dict(row)) for row in rows])
+
+    def cohorts(self, query: CohortsQuery, *, today: date) -> CohortsOut:
+        """Retention of the ``query.months`` signup cohorts before the month of ``today``."""
+        period = trailing_months(today, query.months)
+        rows = self._analytics.cohort_retention(
+            first_month=period.first_month, last_month=period.last_month
+        )
+        cohorts: list[CohortOut] = []
+        # Rows arrive ordered by cohort, so grouping needs no sort.
+        for cohort_month, group in groupby(rows, key=lambda row: row["cohort_month"]):
+            members = list(group)
+            cohorts.append(
+                CohortOut(
+                    cohort_month=cohort_month,
+                    customers=members[0]["customers"],
+                    retention=[CohortMonthOut.model_validate(dict(row)) for row in members],
+                )
+            )
+        return CohortsOut(items=cohorts)
 
 
 def _average_order_value(totals: PeriodTotals) -> Decimal | None:
