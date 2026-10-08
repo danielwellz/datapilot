@@ -25,7 +25,7 @@ from app.ai.executor import QueryResult, apply_query_limits, fetch_result
 from app.ai.prompt import Prompt
 from app.ai.registry import ModelRegistry, RegisteredModel, RegistryConfig
 from app.ai.sql_guard import GuardedSql
-from app.services.ask import AskService
+from app.services.ask import AskService, QueryRunner
 from app.services.rate_limiter import FixedWindowRateLimiter
 
 RunAsReadonly = Callable[[str], list[tuple[Any, ...]]]
@@ -161,18 +161,19 @@ def make_service(
         max_rows: int = 1000,
         statement_timeout_ms: int = 5000,
         rate_limit: int = 10,
+        runner: QueryRunner | None = None,
     ) -> tuple[AskService, SessionRunner]:
         chosen = {"fake": FakeLLMClient(), **(clients or {})}
 
         def client_for(model: RegisteredModel) -> LLMClient:
             return chosen[model.id]
 
-        runner = SessionRunner(db_session, statement_timeout_ms)
+        session_runner = SessionRunner(db_session, statement_timeout_ms)
         service = AskService(
             db_session(),
             registry=registry,
             client_for=client_for,
-            runner=runner,
+            runner=runner or session_runner,
             rate_limiter=FixedWindowRateLimiter(
                 redis_client, name="ai-ask", limit=rate_limit, window_seconds=60
             ),
@@ -180,7 +181,7 @@ def make_service(
             max_rows=max_rows,
             statement_timeout_ms=statement_timeout_ms,
         )
-        return service, runner
+        return service, session_runner
 
     return build
 

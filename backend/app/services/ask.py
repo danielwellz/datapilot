@@ -52,6 +52,9 @@ from app.services.rate_limiter import FixedWindowRateLimiter
 
 logger = logging.getLogger(__name__)
 
+# The code the error handler gives unexpected failures, recorded for them too.
+INTERNAL_ERROR_CODE = "internal_error"
+
 
 class QueryRunner(Protocol):
     def run(self, guarded: GuardedSql) -> QueryResult: ...
@@ -134,6 +137,11 @@ class AskService:
         except _UnansweredError as failure:
             self._finish(audit, started, failure.status, failure.error.code)
             raise self._error(failure, audit) from failure.__cause__
+        except Exception:
+            # Something broke (the read-only database, a bug): the question
+            # is still audited, with what was known, before the error goes on.
+            self._audit_unexpected_failure(audit, started)
+            raise
 
         audit.row_count = result.row_count
         audit.truncated = result.truncated
@@ -336,6 +344,14 @@ class AskService:
                 "latency_ms": audit.latency_ms,
             },
         )
+
+    def _audit_unexpected_failure(self, audit: AiQuery, started: float) -> None:
+        try:
+            self._session.rollback()
+            self._finish(audit, started, AiQueryStatus.ERROR, INTERNAL_ERROR_CODE)
+        except Exception:
+            # The original error matters more than the audit row; keep it.
+            logger.exception("could not audit a question that failed unexpectedly")
 
     @staticmethod
     def _error(failure: _UnansweredError, audit: AiQuery) -> AppError:

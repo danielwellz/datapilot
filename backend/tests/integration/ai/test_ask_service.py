@@ -468,3 +468,46 @@ def test_questions_and_sql_stay_out_of_the_logs(
     )
     assert "Mia Novak" not in captured_logs.text
     assert "SELECT secret" not in captured_logs.text
+
+
+class BrokenRunner:
+    def run(self, guarded: GuardedSql) -> Any:
+        raise RuntimeError("the read-only database went away")
+
+
+def test_an_unexpected_failure_is_still_audited_and_raised(
+    make_service: MakeService, db_session: scoped_session[Session]
+) -> None:
+    service, _ = make_service(
+        {"alpha-1": ScriptedLLMClient(answer(SERIES_SQL))}, runner=BrokenRunner()
+    )
+
+    with pytest.raises(RuntimeError, match="went away"):
+        service.ask(create_user().id, "Count to five", "alpha-1")
+
+    audit = _audit(db_session)
+    assert (audit.status, audit.error_code, audit.model, audit.generated_sql) == (
+        "error",
+        "internal_error",
+        "alpha-1",
+        SERIES_SQL,
+    )
+
+
+def test_a_failure_to_audit_does_not_hide_the_original_error(
+    make_service: MakeService, captured_logs: LogCapture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service, _ = make_service(
+        {"alpha-1": ScriptedLLMClient(answer(SERIES_SQL))}, runner=BrokenRunner()
+    )
+
+    def no_database(*_args: object) -> None:
+        raise ConnectionError("database down too")
+
+    monkeypatch.setattr(service, "_finish", no_database)
+
+    with pytest.raises(RuntimeError, match="went away"):
+        service.ask(create_user().id, "Count to five", "alpha-1")
+
+    logged = _logged(captured_logs, "could not audit a question that failed unexpectedly")
+    assert logged["level"] == "ERROR"
