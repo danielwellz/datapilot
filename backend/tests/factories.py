@@ -56,16 +56,8 @@ def create_user(
     full_name: str = "Ana Lima",
     password_hash: str | None = None,
 ) -> User:
-    """Insert and commit a user, as an earlier request would have.
-
-    Committing matters: the session is removed whenever an app context ends,
-    which discards anything only flushed. In the test harness the commit only
-    releases a savepoint, so the row still disappears with the test.
-    """
-    user = build_user(email=email, full_name=full_name, password_hash=password_hash)
-    db.session.add(user)
-    db.session.commit()
-    return user
+    """Insert and commit a user, as an earlier request would have."""
+    return _commit(build_user(email=email, full_name=full_name, password_hash=password_hash))
 
 
 _SIGNUP_TIME = datetime(2025, 1, 15, 9, 30, tzinfo=UTC)
@@ -120,6 +112,12 @@ def create_order(
 
 
 def _commit[T](instance: T) -> T:
+    """Insert and commit ``instance``.
+
+    Committing matters: the session is removed whenever an app context ends,
+    which discards anything only flushed. In the test harness the commit only
+    releases a savepoint, so the row still disappears with the test.
+    """
     db.session.add(instance)
     db.session.commit()
     return instance
