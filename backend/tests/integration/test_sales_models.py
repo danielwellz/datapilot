@@ -5,6 +5,7 @@ from sqlalchemy import delete, select, text
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.orm import Session, scoped_session, selectinload
 
+from app.analytics.queries import SQL_DIR
 from app.models import Order, OrderItem, OrderStatus, Product
 from tests.factories import create_customer, create_order, create_product
 
@@ -66,6 +67,28 @@ def test_sales_tables_have_exactly_the_measured_indexes_and_all_are_valid(
         ("pk_products", True),
         ("uq_customers_email", True),
     ]
+
+
+def test_orders_have_statistics_on_the_month_the_revenue_query_groups_by(
+    session: Session,
+) -> None:
+    # The planner applies extended statistics only to an identical
+    # expression, so the query must keep grouping by exactly this one.
+    expression = "CAST(date_trunc('month', created_at AT TIME ZONE 'UTC') AS date)"
+    rows = session.execute(
+        text(
+            "SELECT stxname, pg_get_statisticsobjdef_expressions(oid) FROM pg_statistic_ext "
+            "WHERE stxrelid = 'orders'::regclass"
+        )
+    ).all()
+
+    assert [tuple(row) for row in rows] == [
+        (
+            "st_orders_created_month_utc",
+            ["(date_trunc('month'::text, (created_at AT TIME ZONE 'UTC'::text)))::date"],
+        )
+    ]
+    assert expression in (SQL_DIR / "revenue_monthly.sql").read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize(
