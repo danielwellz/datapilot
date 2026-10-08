@@ -18,6 +18,7 @@ dependencies = [
     "redis>=8.1.0",
     "spectree[flask]>=3.0.0",
     "sqlalchemy>=2.1.1",
+    "sqlglot>=30.21.0",
 ]
 
 [dependency-groups]
