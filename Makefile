@@ -14,7 +14,7 @@ runs ?= 10
 
 .PHONY: help up down logs reset-db \
 	be-install be-dev be-test be-lint be-format be-typecheck \
-	db-migrate db-upgrade seed explain explain-analytics \
+	db-migrate db-upgrade db-roles seed explain explain-analytics \
 	fe-install fe-dev fe-test fe-lint fe-build \
 	hooks check demo
 
@@ -65,6 +65,9 @@ db-migrate: ## Autogenerate a migration: make db-migrate m="message"
 
 db-upgrade: ## Apply migrations to the development database
 	cd $(BACKEND) && uv run flask --app app db upgrade
+
+db-roles: ## Set the read-only role's password from READONLY_DATABASE_URL (after db-upgrade)
+	cd $(BACKEND) && uv run flask --app app db-roles
 
 seed: ## Load sales data: make seed scale=small|full [seed=42]
 	cd $(BACKEND) && uv run flask --app app seed --scale $(scale) --seed $(seed)

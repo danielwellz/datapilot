@@ -15,7 +15,7 @@ from flask.testing import FlaskClient
 
 from app import create_app
 from app.config import Settings
-from app.extensions import db, get_redis
+from app.extensions import db, get_readonly_engine, get_redis
 from tests.logs import LogCapture, capture_logs
 from tests.settings import make_test_settings
 
@@ -26,6 +26,7 @@ def close_app_resources(app: Flask) -> None:
     """Close pooled database and Redis connections, which warn if left open."""
     with app.app_context():
         db.engine.dispose()
+        get_readonly_engine().dispose()
         get_redis().close()
 
 

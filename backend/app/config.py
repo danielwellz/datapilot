@@ -16,6 +16,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 # The repository root, so the same .env is found whether the process starts
 # in the repository root (Docker, CI) or in backend/ (Makefile targets).
@@ -54,8 +55,10 @@ class Settings(BaseSettings):
     app_env: AppEnv = "development"
     secret_key: SecretStr
     database_url: PostgresDsn
-    # Required from Stage 6, when Ask your data starts using the read-only role.
-    readonly_database_url: PostgresDsn | None = None
+    # Ask your data runs model-written SQL through this connection only: it
+    # logs in as datapilot_readonly, which can read the analytics views and
+    # nothing else.
+    readonly_database_url: PostgresDsn
     redis_url: RedisDsn
 
     jwt_secret_key: SecretStr
@@ -103,6 +106,11 @@ class Settings(BaseSettings):
                     f"{name} must be a random value of at least "
                     f"{_MIN_PRODUCTION_SECRET_LENGTH} characters in production"
                 )
+        readonly_password = make_url(str(self.readonly_database_url)).password or ""
+        if _PLACEHOLDER_MARKER in readonly_password:
+            raise ValueError(
+                "READONLY_DATABASE_URL must not use a placeholder password in production"
+            )
         return self
 
     @property

@@ -12,6 +12,7 @@ from app.services.passwords import PasswordHasher
 from tests.conftest import AppFactory
 from tests.cookies import CSRF_COOKIE, REFRESH_COOKIE, set_cookie
 from tests.factories import DEFAULT_PASSWORD, create_user
+from tests.settings import PRODUCTION_SECRETS
 from tests.tokens import bearer
 
 URL = "/api/auth/login"
@@ -82,8 +83,7 @@ def test_login_sets_a_script_readable_csrf_cookie_for_the_whole_site(client: Fla
 
 
 def test_login_cookies_are_secure_in_production(make_app: AppFactory) -> None:
-    strong = "p" * 40
-    client = make_app(app_env="production", secret_key=strong, jwt_secret_key=strong).test_client()
+    client = make_app(app_env="production", **PRODUCTION_SECRETS).test_client()
     create_user(email=EMAIL)
 
     response = login(client)

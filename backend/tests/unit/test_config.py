@@ -4,13 +4,14 @@ import pytest
 from pydantic import ValidationError
 
 from app.config import Settings
-from tests.settings import make_test_settings
+from tests.settings import PRODUCTION_SECRETS, make_test_settings
 
 REQUIRED_ENVIRONMENT = {
     "SECRET_KEY": "secret-from-environment",
     "JWT_SECRET_KEY": "jwt-secret-from-environment-32-chars",
     "DATABASE_URL": "postgresql+psycopg://user:pass@db.internal:5432/datapilot",
     "REDIS_URL": "redis://cache.internal:6379/0",
+    "READONLY_DATABASE_URL": "postgresql+psycopg://datapilot_readonly:pass@db.internal:5432/datapilot",
 }
 STRONG_SECRET = "x" * 32
 
@@ -36,7 +37,6 @@ def test_settings_load_required_values_and_defaults_from_environment(
     assert settings.app_env == "development"
     assert settings.jwt_access_ttl_minutes == 15
     assert settings.llm_provider == "fake"
-    assert settings.readonly_database_url is None
 
 
 def test_settings_parse_typed_values_from_environment(environment: pytest.MonkeyPatch) -> None:
@@ -135,9 +135,24 @@ def test_token_lifetimes_are_exposed_as_durations() -> None:
     assert settings.refresh_token_ttl == timedelta(days=2)
 
 
+def test_production_settings_reject_a_placeholder_readonly_password() -> None:
+    with pytest.raises(ValidationError, match="READONLY_DATABASE_URL must not use a placeholder"):
+        make_test_settings(
+            app_env="production",
+            secret_key=STRONG_SECRET,
+            jwt_secret_key=STRONG_SECRET,
+            readonly_database_url=(
+                "postgresql+psycopg://datapilot_readonly:change-me-readonly@db:5432/datapilot"
+            ),
+        )
+
+
 def test_production_settings_accept_strong_secrets() -> None:
     settings = make_test_settings(
-        app_env="production", secret_key=STRONG_SECRET, jwt_secret_key=STRONG_SECRET
+        app_env="production",
+        secret_key=STRONG_SECRET,
+        jwt_secret_key=STRONG_SECRET,
+        readonly_database_url=PRODUCTION_SECRETS["readonly_database_url"],
     )
 
     assert settings.is_production

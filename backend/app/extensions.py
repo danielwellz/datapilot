@@ -8,7 +8,7 @@ from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from redis import Redis
-from sqlalchemy import DateTime, MetaData
+from sqlalchemy import DateTime, Engine, MetaData, create_engine
 from sqlalchemy.orm import DeclarativeBase, registry
 
 from app.config import Settings
@@ -30,6 +30,11 @@ MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "migrations"
 REFRESH_COOKIE_PATH = "/api/auth"
 
 _REDIS_EXTENSION_KEY = "datapilot.redis"
+_READONLY_ENGINE_EXTENSION_KEY = "datapilot.readonly_engine"
+# Ask your data runs one query per request, so a few connections per process
+# are plenty; the cap also bounds what the read-only role can hold open.
+_READONLY_POOL_SIZE = 2
+_READONLY_MAX_OVERFLOW = 3
 # Fail fast when Redis is unreachable instead of holding a worker for the
 # library's default of no timeout at all.
 _REDIS_TIMEOUT_SECONDS = 2.0
@@ -88,6 +93,15 @@ def init_extensions(app: Flask, settings: Settings) -> None:
     db.init_app(app)
     migrate.init_app(app, db, directory=str(MIGRATIONS_DIR), compare_type=True)
     jwt.init_app(app)
+    # A separate engine, not a bind of Flask-SQLAlchemy: nothing in the
+    # application may run on it by accident through the shared session.
+    app.extensions[_READONLY_ENGINE_EXTENSION_KEY] = create_engine(
+        str(settings.readonly_database_url),
+        pool_size=_READONLY_POOL_SIZE,
+        max_overflow=_READONLY_MAX_OVERFLOW,
+        pool_pre_ping=True,
+        connect_args={"connect_timeout": _DATABASE_CONNECT_TIMEOUT_SECONDS},
+    )
     app.extensions[_REDIS_EXTENSION_KEY] = Redis.from_url(
         str(settings.redis_url),
         decode_responses=True,
@@ -100,3 +114,9 @@ def get_redis() -> Redis:
     """Return the Redis client of the current application."""
     client: Redis = current_app.extensions[_REDIS_EXTENSION_KEY]
     return client
+
+
+def get_readonly_engine() -> Engine:
+    """Return the engine that connects as the read-only role, for model-written SQL only."""
+    engine: Engine = current_app.extensions[_READONLY_ENGINE_EXTENSION_KEY]
+    return engine
