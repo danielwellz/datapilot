@@ -34,6 +34,10 @@ The same `seed` value (default 42) and end date always produce the same rows: `c
 
 Seeding also creates a demo account: `demo@datapilot.dev` with the password `DataPilot-demo-2026`.
 
+### Performance
+
+On the full dataset, every measured orders list and detail request has a p95 under 15 ms, at any page depth. [docs/performance.md](docs/performance.md) has the measurements before and after indexing, the query plans, and the reasoning behind each index. `make explain` runs the EXPLAIN scenarios again on your database. Pagination uses signed keyset cursors ([ADR 0005](docs/adr/0005-keyset-pagination.md)).
+
 ## License
 
 [MIT](LICENSE)
