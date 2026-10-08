@@ -32,6 +32,8 @@ def register_cli(app: Flask) -> None:
     type=click.Path(dir_okay=False, writable=True, path_type=Path),
     help="Write the document to this file instead of standard output.",
 )
+# The document is built from the routes of the current app, so it needs one.
+@with_appcontext
 def openapi_command(output: Path | None) -> None:
     """Export the OpenAPI document as JSON, for example to generate client types."""
     document: dict[str, Any] = spec.spec
