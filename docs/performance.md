@@ -1,6 +1,11 @@
 # Performance
 
-DataPilot must stay fast on the full dataset: 2,000,000 orders, 4,478,509 order items and 50,000 customers. The target for the orders list and detail is a **p95 under 150 ms**, uncached, on a laptop. This document records how the orders endpoints were measured, which indexes were added and why, and the results before and after.
+DataPilot must stay fast on the full dataset: 2,000,000 orders, 4,478,509 order items and 50,000 customers. The targets, on a laptop, are:
+
+- **Orders list and detail:** p95 under 150 ms, uncached.
+- **Analytics endpoints:** under 50 ms cached and under 800 ms uncached.
+
+This document records how each was measured, what was changed and why, and the results before and after. The orders endpoints come first; the analytics endpoints follow in [Analytics endpoints](#analytics-endpoints).
 
 ## Results
 
@@ -82,7 +87,7 @@ Each one was built on the full dataset, measured, and dropped again:
 
 - **`customers (country)`**, suggested for the country filter. The filter never used it: the plan reaches each customer through the primary key while walking orders by date, so an index on country has nothing to do there. The only query that used it was the list of distinct countries in `/api/meta`, which dropped from 5.4 ms to 3.2 ms. That is not worth a permanent index.
 - **`orders (status, created_at, id)`**, for rare status filters. With it, "cancelled orders from DK" dropped from 8.95 ms to 2.6 ms. That query is already 17 times under the target, while the index would add 60 MB and work on every insert. It can be added later if a measured query needs it.
-- **A partial index on paid orders** belongs to the analytics queries of the next stage, where a plan can prove it is needed.
+- **A partial index on paid orders** was left to the analytics queries, where a plan could prove it was needed. One did: see [Cohorts](#cohorts-a-partial-index-for-an-index-only-join).
 - **`order_items (product_id)`** was not used by any orders endpoint. The detail reads items through the primary key `(order_id, product_id)`.
 
 ## Keyset compared with OFFSET at depth
@@ -118,3 +123,145 @@ For a selective `min_total`, the planner switches to a range read on `(total, id
 ## Query counts
 
 The list runs **2 queries** per request whatever the page size: the token's user, then the page of orders joined to their customers. The detail runs **3**: the user, the order joined to its customer, and the items joined to their products. Integration tests assert these counts at page sizes 1 and 100, and for orders with 1 and 10 items, using a fixture that records every statement sent to PostgreSQL. Model relationships use `lazy="raise"`, so an accidental lazy load fails a test instead of adding a query per row.
+
+## Analytics endpoints
+
+The five analytics endpoints and `/api/meta` are answered through a Redis cache-aside layer ([ADR 0006](adr/0006-analytics-sql-and-caching.md)). A cached request reads one entry from Redis. An uncached request runs one analytics query, which aggregates hundreds of thousands to millions of rows. Both kinds are measured below.
+
+### Results
+
+API latency from `scripts/bench_api.py` against gunicorn with 2 workers, sequential requests over one keep-alive connection:
+
+- **Uncached:** 50 requests after 3 warm-up requests, with `--invalidate-cache`, which bumps `data_version` before each request (outside the timing), so every request misses.
+- **Cached:** 500 requests after 50 warm-up requests.
+- **Proof of kind:** the script counted the `X-Cache` header of every timed response. It was `MISS` for all 50 uncached requests and `HIT` for all 500 cached ones, in every row.
+
+| Request | Uncached p95 before | Uncached p50 after | **Uncached p95 after** | Uncached p99 after | **Cached p95** |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `/api/analytics/summary` (30 days) | 116.1 ms | 62.0 ms | **68.3 ms** | 89.7 ms | **2.7 ms** |
+| `/api/analytics/summary?days=365` | 614.7 ms | 294.7 ms | **313.7 ms** | 329.5 ms | **3.3 ms** |
+| `/api/analytics/revenue-monthly` (24 months) | 481.7 ms | 141.7 ms | **148.3 ms** | 152.9 ms | **2.8 ms** |
+| `/api/analytics/revenue-monthly?months=36` | 462.6 ms | 141.9 ms | **149.1 ms** | 157.6 ms | **8.9 ms** |
+| `/api/analytics/top-customers` (365 days) | 212.1 ms | 194.7 ms | **199.7 ms** | 221.7 ms | **2.5 ms** |
+| `/api/analytics/products` (365 days) | 438.4 ms | 397.0 ms | **423.0 ms** | 425.8 ms | **2.7 ms** |
+| `/api/analytics/cohorts` (12 months) | 224.6 ms | 66.6 ms | **69.4 ms** | 71.9 ms | **2.9 ms** |
+| `/api/analytics/cohorts?months=24` | 795.5 ms | 237.2 ms | **248.4 ms** | 265.9 ms | **5.8 ms** |
+| `/api/meta` | 9.4 ms | 7.0 ms | **9.2 ms** | 16.0 ms | **2.8 ms** |
+
+Every endpoint meets both targets:
+
+- **Uncached:** under 800 ms, with the slowest, the product ranking, at 423 ms. Before the tuning, the 24-month cohorts reached 796 ms at p95 and 864 ms at the maximum.
+- **Cached:** p95 between 2.5 and 8.9 ms, against a 50 ms target.
+
+A hit costs two Redis reads (the data version and the entry) and one validation of the stored JSON against the response model. The "before" column is the same benchmark, run before the three changes below.
+
+**Stampede lock under load.** Right after a `data_version` bump, 8 concurrent requests for `/api/analytics/cohorts?months=24` returned 1 `MISS` and 7 `HIT`, all within 283 to 300 ms. One request ran the query, and the others waited for its result instead of running the same query themselves.
+
+Inside PostgreSQL, from `make explain-analytics` (median `EXPLAIN (ANALYZE, BUFFERS)` execution time over 10 runs, periods ending 2026-10-07):
+
+| Scenario | Before | After | What changed |
+| --- | ---: | ---: | --- |
+| `summary-30` | 113.96 ms | 61.25 ms | Per-customer grouping |
+| `summary-365` | 681.67 ms | 320.85 ms | Per-customer grouping |
+| `revenue-monthly-24` | 491.87 ms | 152.21 ms | Statistics on the month expression |
+| `revenue-monthly-36` | 494.90 ms | 154.40 ms | Statistics on the month expression |
+| `top-customers` (every country) | 204.34 ms | 209.37 ms | Nothing |
+| `top-customers-de` | 168.84 ms | 173.03 ms | Nothing |
+| `products` | 444.96 ms | 485.38 ms | Nothing |
+| `products-category` (Electronics) | 455.88 ms | 497.11 ms | Nothing |
+| `cohorts-12` | 243.02 ms | 72.86 ms | Partial index on paid orders |
+| `cohorts-24` | 818.42 ms | 338.25 ms | Partial index on paid orders |
+
+The rows marked "Nothing" kept the same plan. Their differences are run-to-run variation. The product ranking reads all of `order_items` (36,000 blocks, mostly from the operating system's cache), so it varies the most.
+
+The "after" runs were taken on a fresh seed of the identical dataset (seed 42, history ending 2026-10-07), after autovacuum had processed it. The reason is given under [After a seed](#after-a-seed).
+
+### Summary: grouping by customer instead of count(DISTINCT)
+
+The first version counted active customers with `count(DISTINCT customer_id) FILTER (WHERE status = 'paid')`. PostgreSQL cannot split a distinct count across parallel workers, so it gathered all 1.47 million orders of the two 365-day periods into one process and sorted them, spilling to disk ("external merge"):
+
+```
+Aggregate (rows=2)
+  Gather Merge (rows=1474545, workers=2)
+    Sort (rows=491515, loops=3, sort=external merge)
+      Seq Scan on orders (rows=491515, loops=3, removed by filter=175152)
+```
+
+The rewrite first groups the orders by customer and period, then counts those groups. A GROUP BY can be aggregated in parallel: each worker reduces its third of the rows to about 70,000 groups, and only those are merged:
+
+```
+Aggregate (rows=2)
+  Aggregate (rows=78750)
+    Gather Merge (rows=210701, workers=2)
+      Sort (rows=70234, loops=3, sort=external merge)
+        Aggregate (rows=70234, loops=3)
+          Seq Scan on orders (rows=491515, loops=3, removed by filter=175152)
+```
+
+Three variants were measured. Grouping by the period label (`'current'` or `'previous'`) gave a serial plan (536 ms). Grouping by the boolean `created_at >= :current_start` gave the parallel plan above (307 ms). One row per customer with separate columns for each period was slower (349 ms) and harder to read. The remaining spill comes from the default `work_mem` of 4 MB; raising it is a server setting, left at its default here.
+
+### Monthly revenue: statistics on an expression
+
+The query groups paid orders by `CAST(date_trunc('month', created_at AT TIME ZONE 'UTC') AS date)`. PostgreSQL keeps statistics per column, not per expression, so it estimated **1,859,612 groups instead of 36**. With that estimate, a parallel partial aggregate looked pointless, and it chose one serial hash aggregate planned for 128 partitions:
+
+```
+HashAggregate  (rows=1859612 estimated, 36 actual)
+  ->  Seq Scan on orders  (rows=1883204)
+```
+
+The migration `239eec08d96c` adds extended statistics on exactly that expression (`st_orders_created_month_utc`) and analyses the table. The estimate became 37 (the data spans 37 months), and the planner chose a parallel partial aggregate:
+
+```
+Finalize GroupAggregate (rows=36)
+  Gather Merge (rows=106, workers=2)
+    Sort (rows=35, loops=3)
+      Partial HashAggregate (rows=35, loops=3)
+        Parallel Seq Scan on orders (rows=627735, loops=3)
+```
+
+The statistics object costs nothing on writes. The seed already runs `ANALYZE` after each load, which refreshes it; a fresh seed was checked and estimated 37 months. The planner uses it only for an identical expression, so `test_orders_have_statistics_on_the_month_the_revenue_query_groups_by` pins both the object and the expression in `revenue_monthly.sql`.
+
+### Cohorts: a partial index for an index-only join
+
+At 24 months, the cohort query joins 31,117 customers to their paid orders over two years. The planner merged them through `ix_orders_customer_id_created_at_id`, which does not contain `status`. It therefore fetched 1.39 million order rows from the table only to check that each order was paid: 1,456,537 buffer hits and 818 ms, over the target.
+
+The migration `959f4df99a26` adds `ix_orders_paid_customer_id_created_at`, on `(customer_id, created_at) WHERE status = 'paid'`. It holds everything the join reads, so the join becomes an index-only scan that never visits the table:
+
+```
+Merge Join (rows=563921)
+  Index Only Scan using ix_orders_paid_customer_id_created_at on orders (rows=1394865)  -- heap fetches: 0
+  Sort (rows=566264)
+    CTE Scan (rows=31117)
+```
+
+| | Without the index | With it |
+| --- | ---: | ---: |
+| 12 months (default) | 243 ms | 73 ms |
+| 24 months | 818 ms | 338 ms |
+
+The index is built concurrently, in 1.4 s on the full dataset. It is 57 MB when built, and 79 MB after a seed, which maintains it row by row. Every other analytics scenario was measured with and without it and kept the same plan and time.
+
+The alternative measured first was `NOT MATERIALIZED` on the cohort members CTE. That CTE is referenced twice, so PostgreSQL computes it once and hides its row estimates from the join. Inlined, it allowed a hash join: 531 ms at 24 months. But the default 12 months slowed from 243 to 306 ms, because the inlined plan went parallel with a sort that spilled to disk. Collapsing the paid orders to distinct customer-months before the join was measured too (375 ms and 535 ms). The index made both cases faster, so it was adopted and the CTE left unchanged.
+
+### After a seed
+
+An index-only scan reads the table after all for any page that the visibility map does not mark all-visible, and only vacuum sets those marks. A seed loads 2 million new rows, so immediately afterwards no page is all-visible (`relallvisible = 0`). This was measured on a fresh seed:
+
+| Scenario | Right after the seed | After autovacuum |
+| --- | ---: | ---: |
+| `cohorts-12` | 282.83 ms | 72.86 ms |
+| `cohorts-24` | 747.00 ms | 338.25 ms |
+
+Autovacuum's insert-triggered vacuum ran about 1.5 minutes after the seed finished. Even before it, every query stays under the 800 ms target. The cache also means a cold query is paid once per entry, not once per request.
+
+### Reproduce
+
+```bash
+make explain-analytics                      # EXPLAIN scenarios on the dev database
+cd backend && uv run gunicorn --workers 2 --bind 127.0.0.1:5001 "app:create_app()"
+# in a second terminal, from backend/:
+uv run python -m scripts.bench_api --path "/api/analytics/cohorts?months=24" -n 50 --warmup 3 --invalidate-cache
+uv run python -m scripts.bench_api --path "/api/analytics/cohorts?months=24" -n 500 --warmup 50
+```
+
+`--invalidate-cache` bumps `data_version`, which invalidates every cached response, so use it only against a development stack. Login is limited to 5 attempts per minute per address and email, so space out repeated runs.
