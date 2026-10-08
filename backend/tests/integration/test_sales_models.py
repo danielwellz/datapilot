@@ -60,6 +60,7 @@ def test_sales_tables_have_exactly_the_measured_indexes_and_all_are_valid(
     assert [tuple(row) for row in rows] == [
         ("ix_orders_created_at_id", True),
         ("ix_orders_customer_id_created_at_id", True),
+        ("ix_orders_paid_customer_id_created_at", True),
         ("ix_orders_total_id", True),
         ("pk_customers", True),
         ("pk_order_items", True),

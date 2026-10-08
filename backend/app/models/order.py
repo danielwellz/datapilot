@@ -16,6 +16,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     Text,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -66,6 +67,14 @@ class Order(Base):
         Index("ix_orders_created_at_id", "created_at", "id"),
         Index("ix_orders_total_id", "total", "id"),
         Index("ix_orders_customer_id_created_at_id", "customer_id", "created_at", "id"),
+        # The cohort query's join of customers to their paid orders, read
+        # without visiting the table (an index-only scan).
+        Index(
+            "ix_orders_paid_customer_id_created_at",
+            "customer_id",
+            "created_at",
+            postgresql_where=text("status = 'paid'"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(always=True), primary_key=True)
