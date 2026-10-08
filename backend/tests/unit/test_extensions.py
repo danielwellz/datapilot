@@ -9,6 +9,7 @@ from sqlalchemy.schema import CreateIndex, CreateTable
 from app.config import Settings
 from app.extensions import Base, db, get_redis
 from tests.conftest import AppFactory
+from tests.settings import PRODUCTION_SECRETS
 
 
 @pytest.mark.usefixtures("app_context")
@@ -76,7 +77,6 @@ def test_refresh_cookie_is_strict_persistent_and_scoped_to_auth_endpoints(app: F
 def test_cookies_are_secure_only_in_production(
     make_app: AppFactory, app_env: str, secure: bool
 ) -> None:
-    strong = "s" * 40
-    app = make_app(app_env=app_env, secret_key=strong, jwt_secret_key=strong)
+    app = make_app(app_env=app_env, **PRODUCTION_SECRETS)
 
     assert app.config["JWT_COOKIE_SECURE"] is secure

@@ -39,9 +39,14 @@ def _migrated_database(app: Flask, settings: Settings) -> None:
         pytest.exit(f"Refusing to reset {database!r}: the test database name must end in _test.")
     with app.app_context():
         with db.engine.begin() as connection:
+            connection.execute(text("DROP SCHEMA IF EXISTS analytics CASCADE"))
             connection.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
             connection.execute(text("CREATE SCHEMA public"))
         flask_migrate.upgrade()
+        # CI and fresh clusters have no password for the read-only role yet.
+        result = app.test_cli_runner().invoke(args=["db-roles"])
+        if result.exit_code != 0:
+            pytest.exit(f"Could not set the read-only role's password: {result.output}")
 
 
 @pytest.fixture(autouse=True)

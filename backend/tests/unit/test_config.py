@@ -1,16 +1,19 @@
+import os
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
-from app.config import Settings
-from tests.settings import make_test_settings
+from app.config import API_KEY_ENV_PATTERN, ApiKeysSource, Settings
+from tests.settings import PRODUCTION_SECRETS, make_test_settings
 
 REQUIRED_ENVIRONMENT = {
     "SECRET_KEY": "secret-from-environment",
     "JWT_SECRET_KEY": "jwt-secret-from-environment-32-chars",
     "DATABASE_URL": "postgresql+psycopg://user:pass@db.internal:5432/datapilot",
     "REDIS_URL": "redis://cache.internal:6379/0",
+    "READONLY_DATABASE_URL": "postgresql+psycopg://datapilot_readonly:pass@db.internal:5432/datapilot",
 }
 STRONG_SECRET = "x" * 32
 
@@ -21,6 +24,9 @@ def environment(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     monkeypatch.setitem(Settings.model_config, "env_file", None)
     for name in Settings.model_fields:
         monkeypatch.delenv(name.upper(), raising=False)
+    for name in list(os.environ):
+        if API_KEY_ENV_PATTERN.fullmatch(name):
+            monkeypatch.delenv(name)
     for name, value in REQUIRED_ENVIRONMENT.items():
         monkeypatch.setenv(name, value)
     return monkeypatch
@@ -35,8 +41,8 @@ def test_settings_load_required_values_and_defaults_from_environment(
     assert str(settings.database_url).endswith("@db.internal:5432/datapilot")
     assert settings.app_env == "development"
     assert settings.jwt_access_ttl_minutes == 15
-    assert settings.llm_provider == "fake"
-    assert settings.readonly_database_url is None
+    assert settings.llm_default_model is None
+    assert settings.llm_api_keys == {}
 
 
 def test_settings_parse_typed_values_from_environment(environment: pytest.MonkeyPatch) -> None:
@@ -77,12 +83,54 @@ def test_settings_reject_invalid_values(
         Settings()
 
 
-def test_settings_treat_empty_anthropic_api_key_as_missing(
+def test_settings_collect_every_non_empty_api_key_variable(
     environment: pytest.MonkeyPatch,
 ) -> None:
+    environment.setenv("GROQ_API_KEY", "groq-key")
+    environment.setenv("SOME_NEW_PROVIDER_API_KEY", "new-key")
     environment.setenv("ANTHROPIC_API_KEY", "")
+    environment.setenv("API_KEY", "not-a-provider-key")
 
-    assert Settings().anthropic_api_key is None
+    keys = Settings().llm_api_keys
+
+    assert {name: key.get_secret_value() for name, key in keys.items()} == {
+        "GROQ_API_KEY": "groq-key",
+        "SOME_NEW_PROVIDER_API_KEY": "new-key",
+    }
+
+
+def test_settings_read_api_keys_from_the_env_file_with_the_environment_winning(
+    environment: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("GROQ_API_KEY=from-file\nGEMINI_API_KEY=gemini-from-file\n")
+    environment.setitem(Settings.model_config, "env_file", env_file)
+    environment.setenv("GROQ_API_KEY", "from-environment")
+
+    keys = Settings().llm_api_keys
+
+    assert keys["GROQ_API_KEY"].get_secret_value() == "from-environment"
+    assert keys["GEMINI_API_KEY"].get_secret_value() == "gemini-from-file"
+
+
+def test_settings_keep_api_keys_out_of_their_repr(environment: pytest.MonkeyPatch) -> None:
+    environment.setenv("GROQ_API_KEY", "do-not-print-this-key")
+
+    assert "do-not-print-this-key" not in repr(Settings())
+
+
+def test_settings_read_the_fallback_models_as_a_comma_separated_list(
+    environment: pytest.MonkeyPatch,
+) -> None:
+    environment.setenv("LLM_FALLBACK_MODELS", " groq-gpt-oss-120b , gemini-3.5-flash,")
+    environment.setenv("LLM_DEFAULT_MODEL", "")
+    environment.setenv("LLM_MODELS_FILE", "")
+
+    settings = Settings()
+
+    assert settings.llm_fallback_models == ("groq-gpt-oss-120b", "gemini-3.5-flash")
+    assert settings.llm_default_model is None
+    assert settings.llm_models_file is None
 
 
 def test_settings_keep_secrets_out_of_their_repr() -> None:
@@ -135,9 +183,24 @@ def test_token_lifetimes_are_exposed_as_durations() -> None:
     assert settings.refresh_token_ttl == timedelta(days=2)
 
 
+def test_production_settings_reject_a_placeholder_readonly_password() -> None:
+    with pytest.raises(ValidationError, match="READONLY_DATABASE_URL must not use a placeholder"):
+        make_test_settings(
+            app_env="production",
+            secret_key=STRONG_SECRET,
+            jwt_secret_key=STRONG_SECRET,
+            readonly_database_url=(
+                "postgresql+psycopg://datapilot_readonly:change-me-readonly@db:5432/datapilot"
+            ),
+        )
+
+
 def test_production_settings_accept_strong_secrets() -> None:
     settings = make_test_settings(
-        app_env="production", secret_key=STRONG_SECRET, jwt_secret_key=STRONG_SECRET
+        app_env="production",
+        secret_key=STRONG_SECRET,
+        jwt_secret_key=STRONG_SECRET,
+        readonly_database_url=PRODUCTION_SECRETS["readonly_database_url"],
     )
 
     assert settings.is_production
@@ -151,3 +214,15 @@ def test_test_settings_ignore_the_process_environment(monkeypatch: pytest.Monkey
 
     assert settings.log_level == "INFO"
     assert settings.secret_key.get_secret_value() == "test-secret-key"
+
+
+def test_api_keys_source_provides_its_field_only_as_a_whole() -> None:
+    # pydantic-settings asks sources field by field; this one answers through
+    # __call__ instead, so the per-field lookup reports "not found".
+    field = Settings.model_fields["llm_api_keys"]
+
+    assert ApiKeysSource(Settings).get_field_value(field, "llm_api_keys") == (
+        None,
+        "llm_api_keys",
+        False,
+    )

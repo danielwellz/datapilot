@@ -1,0 +1,95 @@
+# The models Ask your data can use. Configuration, not code: adding a model,
+# or a provider with an OpenAI-compatible API, is an edit to this file (or to
+# a replacement named by LLM_MODELS_FILE).
+#
+# A provider is enabled when the environment variable named by api_key_env
+# holds a key; a provider without api_key_env (a local server) is always
+# enabled. Models of disabled providers are never offered.
+#
+# Model ids are this application's own names, the only ones clients may send.
+# provider_model is the provider's name for the model. json_schema says
+# whether the model accepts a JSON schema for its output; every answer is
+# validated either way. skip_evaluation, when set, says why `make eval-ask`
+# leaves the model out unless it is named with --models.
+#
+# Order matters: with LLM_DEFAULT_MODEL unset, the default is the first
+# enabled model. Base URLs and model names were checked on 2026-10-08.
+
+[providers.groq]
+type = "openai_compatible"
+label = "Groq"
+base_url = "https://api.groq.com/openai/v1"
+api_key_env = "GROQ_API_KEY"
+
+[providers.gemini]
+type = "openai_compatible"
+label = "Google Gemini"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+api_key_env = "GEMINI_API_KEY"
+
+[providers.anthropic]
+type = "anthropic"
+label = "Anthropic"
+api_key_env = "ANTHROPIC_API_KEY"
+
+[providers.openrouter]
+type = "openai_compatible"
+label = "OpenRouter"
+base_url = "https://openrouter.ai/api/v1"
+api_key_env = "OPENROUTER_API_KEY"
+
+[providers.fake]
+type = "fake"
+label = "Demo"
+
+[[models]]
+id = "groq-gpt-oss-120b"
+provider = "groq"
+label = "GPT-OSS 120B (Groq)"
+provider_model = "openai/gpt-oss-120b"
+json_schema = true
+
+[[models]]
+id = "gemini-3.5-flash"
+provider = "gemini"
+label = "Gemini 3.5 Flash"
+provider_model = "gemini-3.5-flash"
+json_schema = true
+skip_evaluation = "Its free tier allows only 20 requests a day, fewer than one evaluation run needs."
+
+[[models]]
+id = "groq-qwen3.8-27b"
+provider = "groq"
+label = "Qwen3.8 27B (Groq)"
+provider_model = "qwen/qwen3.8-27b"
+json_schema = true
+
+[[models]]
+id = "gemini-3.5-flash-lite"
+provider = "gemini"
+label = "Gemini 3.5 Flash-Lite"
+provider_model = "gemini-3.5-flash-lite"
+json_schema = true
+
+[[models]]
+id = "claude-sonnet-5-5"
+provider = "anthropic"
+label = "Claude Sonnet 5.5"
+provider_model = "claude-sonnet-5-5"
+json_schema = true
+
+[[models]]
+id = "openrouter-nemotron-3-super"
+provider = "openrouter"
+label = "Nemotron 3 Super (OpenRouter, free)"
+provider_model = "nvidia/nemotron-3-super-120b-a12b:free"
+# Not verified with a key; the JSON-in-prompt path works for any model.
+json_schema = false
+
+[[models]]
+id = "fake"
+provider = "fake"
+label = "Demo model (example questions only)"
+provider_model = "fake"
+json_schema = false
+skip_evaluation = "It answers only the example questions."

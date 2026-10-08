@@ -10,9 +10,12 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 from functools import cache
+from typing import Any
 
 from app.extensions import db
 from app.models import (
+    AiQuery,
+    AiQueryStatus,
     Customer,
     Order,
     OrderChannel,
@@ -109,6 +112,27 @@ def create_order(
         items=items,
     )
     return _commit(order)
+
+
+def create_ai_query(user: User, **overrides: Any) -> AiQuery:
+    """Insert and commit a successful audit row; keyword arguments replace its values."""
+    values: dict[str, Any] = {
+        "user_id": user.id,
+        "question": "How many orders?",
+        "requested_model": "fake",
+        "model": "fake",
+        "provider": "fake",
+        "prompt_version": "2026-10-08.1",
+        "status": AiQueryStatus.OK,
+        "generated_sql": "SELECT count(*) AS orders FROM v_orders",
+        "executed_sql": "SELECT\n  COUNT(*) AS orders\nFROM v_orders\nLIMIT 1001",
+        "row_count": 1,
+        "latency_ms": 12,
+        "explanation": "All orders ever placed.",
+        "chart": "none",
+        "assumptions": [],
+    }
+    return _commit(AiQuery(**(values | overrides)))
 
 
 def _commit[T](instance: T) -> T:

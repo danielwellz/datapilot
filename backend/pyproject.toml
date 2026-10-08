@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "DataPilot API: sales analytics and natural-language queries over PostgreSQL."
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "anthropic>=1.12.1",
     "argon2-cffi>=25.1.0",
     "email-validator>=2.3.0",
     "flask>=3.1.3",
@@ -11,13 +12,16 @@ dependencies = [
     "flask-migrate>=4.1.0",
     "flask-sqlalchemy>=3.1.1",
     "gunicorn>=26.2.0",
+    "openai>=3.26.1",
     "psycopg[binary]>=3.3.6",
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
+    "python-dotenv>=1.2.3",
     "python-json-logger>=4.2.0",
     "redis>=8.1.0",
     "spectree[flask]>=3.0.0",
     "sqlalchemy>=2.1.1",
+    "sqlglot>=30.21.0",
 ]
 
 [dependency-groups]
@@ -64,6 +68,7 @@ select = [
 "tests/**/*.py" = ["S101", "S105", "S106"]
 # Error classes are named after the HTTP outcome they produce (`raise NotFound()`).
 "app/errors.py" = ["N818"]
+"app/ai/errors.py" = ["N818"]
 # Seed data must be reproducible from a seed, which is exactly what a
 # cryptographic generator cannot do; nothing here is security-sensitive.
 "app/seed/*.py" = ["S311"]

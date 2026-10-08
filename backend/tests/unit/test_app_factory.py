@@ -44,6 +44,7 @@ def test_create_app_reads_environment_when_no_settings_are_injected(
         "JWT_SECRET_KEY": "jwt-secret-from-environment-32-chars",
         "DATABASE_URL": "postgresql+psycopg://u:p@db.internal:5432/app",
         "REDIS_URL": "redis://cache.internal:6379/0",
+        "READONLY_DATABASE_URL": "postgresql+psycopg://datapilot_readonly:p@db.internal:5432/app",
     }.items():
         monkeypatch.setenv(name, value)
     get_settings.cache_clear()

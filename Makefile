@@ -14,7 +14,7 @@ runs ?= 10
 
 .PHONY: help up down logs reset-db \
 	be-install be-dev be-test be-lint be-format be-typecheck \
-	db-migrate db-upgrade seed explain explain-analytics \
+	db-migrate db-upgrade db-roles seed explain explain-analytics eval-ask \
 	fe-install fe-dev fe-test fe-lint fe-build \
 	hooks check demo
 
@@ -66,6 +66,9 @@ db-migrate: ## Autogenerate a migration: make db-migrate m="message"
 db-upgrade: ## Apply migrations to the development database
 	cd $(BACKEND) && uv run flask --app app db upgrade
 
+db-roles: ## Set the read-only role's password from READONLY_DATABASE_URL (after db-upgrade)
+	cd $(BACKEND) && uv run flask --app app db-roles
+
 seed: ## Load sales data: make seed scale=small|full [seed=42]
 	cd $(BACKEND) && uv run flask --app app seed --scale $(scale) --seed $(seed)
 
@@ -74,6 +77,9 @@ explain: ## EXPLAIN ANALYZE the orders queries on the dev database: make explain
 
 explain-analytics: ## EXPLAIN ANALYZE the analytics queries: make explain-analytics [runs=10]
 	cd $(BACKEND) && uv run python -m scripts.explain_analytics --runs $(runs)
+
+eval-ask: ## Ask the golden questions of the enabled models; writes docs/ai-evaluation.md [args="--models a,b"]
+	cd $(BACKEND) && uv run python -m scripts.eval_ask $(args)
 
 # --- Frontend -------------------------------------------------------------
 

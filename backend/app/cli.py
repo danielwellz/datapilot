@@ -3,17 +3,20 @@
 import json
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import click
+import psycopg
 from flask import Flask
 from flask.cli import with_appcontext
 
 from app import clock
 from app.api.spec import spec
+from app.config import current_settings
 from app.extensions import db, get_redis
 from app.seed.calendar import history_start
 from app.seed.generator import SCALES
+from app.services.db_roles import ReadonlyRoleError, set_readonly_role_password
 from app.services.passwords import PasswordHasher
 from app.services.seeding import DEMO_EMAIL, SeedReport, SeedService
 
@@ -23,6 +26,7 @@ _KIB = 1024
 def register_cli(app: Flask) -> None:
     app.cli.add_command(openapi_command)
     app.cli.add_command(seed_command)
+    app.cli.add_command(db_roles_command)
 
 
 @click.command("openapi")
@@ -126,3 +130,27 @@ def format_size(size_bytes: int) -> str:
     if size_bytes < _KIB**3:
         return f"{size_bytes / _KIB**2:.1f} MB"
     return f"{size_bytes / _KIB**3:.2f} GB"
+
+
+@click.command("db-roles")
+@with_appcontext
+def db_roles_command() -> None:
+    """Let the read-only role log in with the password in READONLY_DATABASE_URL.
+
+    Run it after the migrations, which create the role without a password.
+    """
+    connection = db.engine.raw_connection()
+    try:
+        # The engine is built on psycopg, so the driver connection is one.
+        driver_connection = cast("psycopg.Connection[Any]", connection.driver_connection)
+        set_readonly_role_password(driver_connection, str(current_settings().readonly_database_url))
+        connection.commit()
+    except ReadonlyRoleError as error:
+        raise click.ClickException(str(error)) from error
+    except psycopg.errors.UndefinedObject as error:
+        raise click.ClickException(
+            "The read-only role does not exist yet; run the migrations first (make db-upgrade)."
+        ) from error
+    finally:
+        connection.close()
+    click.echo("The read-only role can now log in with the password in READONLY_DATABASE_URL.")
