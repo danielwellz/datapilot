@@ -5,29 +5,19 @@ from decimal import Decimal
 from typing import Annotated, Self
 
 from pydantic import (
-    AfterValidator,
     BaseModel,
     ConfigDict,
     Field,
-    StringConstraints,
     WithJsonSchema,
     model_validator,
 )
 from pydantic_core import PydanticCustomError
 
 from app.models import OrderChannel, OrderSort, OrderStatus
-from app.schemas.types import DatabaseId, Money, UtcDatetime
+from app.schemas.types import CountryCode, DatabaseId, Money, UtcDatetime
 
 DEFAULT_PAGE_SIZE = 25
 MAX_PAGE_SIZE = 100
-
-CountryCode = Annotated[
-    str,
-    # The pattern runs before any case conversion, so it accepts both cases.
-    StringConstraints(strip_whitespace=True, pattern=r"^[A-Za-z]{2}$"),
-    AfterValidator(str.upper),
-]
-"""An ISO 3166-1 alpha-2 code in either case, normalized to uppercase."""
 
 TotalBound = Annotated[
     Decimal,
