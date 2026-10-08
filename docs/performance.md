@@ -105,10 +105,11 @@ The list is fast when the plan finds a page of matches quickly. The risk is a co
 | `status=cancelled&channel=marketplace&country=DK` | 25 | 30 to 58 ms |
 | `min_total=2000` (154 orders in total) | 25 | 22 to 45 ms |
 | `status=cancelled&country=DK&min_total=500` (2 orders in total) | 2 | 12 to 15 ms |
+| `sort=total` with two statuses, DE, web, September 2026 and totals 100 to 200 (35 orders in total) | 4 | 34 to 38 ms; 132 ms on the first, cold request |
 | `min_total=4000` (no matching orders) | 0 | 3 ms |
 | `country=ZZ` (no matching customers) | 0 | 4 to 5 ms |
 
-For a selective `min_total`, the planner switches to a range read on `(total, id)` followed by a sort, rather than walking the date index. The worst case found is about a third of the target. If a future filter makes this worse, the remedies are, in order:
+For a selective `min_total`, the planner switches to a range read on `(total, id)` followed by a sort, rather than walking the date index. The slowest case found sorts by total inside a total range and filters on four other columns. It walks `(total, id)` from 200 down and discards 68,788 rows to fill the page. The first request read pages that were not yet in memory (132 ms); repeats took 34 to 38 ms. Every case stays under the target, the cold one included. If a future filter makes this worse, the remedies are, in order:
 
 1. An index that matches the filter, such as `(status, created_at, id)`.
 2. Copying the customer's country onto `orders`, as an expand/contract migration.
