@@ -37,6 +37,13 @@ class OrderChannel(StrEnum):
     MARKETPLACE = "marketplace"
 
 
+class OrderSort(StrEnum):
+    """Orderings the orders list offers, each descending with ``id`` breaking ties."""
+
+    CREATED_AT = "created_at"
+    TOTAL = "total"
+
+
 def _one_of(column: str, values: type[StrEnum]) -> str:
     """SQL for a check that ``column`` holds one of the enum's values.
 

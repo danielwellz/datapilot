@@ -10,6 +10,7 @@ from flask import Blueprint, Flask, request
 from app.api.auth import auth
 from app.api.docs import docs
 from app.api.meta import meta
+from app.api.orders import orders
 from app.api.system import system
 from app.errors import BadRequest, UnsupportedMediaType
 
@@ -19,6 +20,7 @@ api = Blueprint("api", __name__, url_prefix="/api")
 api.register_blueprint(auth)
 api.register_blueprint(docs)
 api.register_blueprint(meta)
+api.register_blueprint(orders)
 api.register_blueprint(system)
 
 

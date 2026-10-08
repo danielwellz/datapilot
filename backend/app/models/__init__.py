@@ -5,7 +5,7 @@ application is built, which Alembic autogenerate relies on.
 """
 
 from app.models.customer import Customer
-from app.models.order import Order, OrderChannel, OrderItem, OrderStatus
+from app.models.order import Order, OrderChannel, OrderItem, OrderSort, OrderStatus
 from app.models.product import Product
 from app.models.user import User
 
@@ -14,6 +14,7 @@ __all__ = [
     "Order",
     "OrderChannel",
     "OrderItem",
+    "OrderSort",
     "OrderStatus",
     "Product",
     "User",

@@ -4,7 +4,10 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import AfterValidator, EmailStr, PlainSerializer, WithJsonSchema
+from pydantic import AfterValidator, EmailStr, Field, PlainSerializer, WithJsonSchema
+
+# The largest value of a PostgreSQL bigint, the type of every primary key.
+MAX_DATABASE_ID = 2**63 - 1
 
 
 def _to_utc_iso(value: datetime) -> str:
@@ -43,3 +46,7 @@ Money = Annotated[
     WithJsonSchema({"type": "string", "pattern": r"^-?\d+\.\d{2}$", "examples": ["1234.50"]}),
 ]
 """An amount of money, serialized in JSON as a decimal string with two places ("1234.50")."""
+
+DatabaseId = Annotated[int, Field(ge=1, le=MAX_DATABASE_ID)]
+"""A primary key value in a request. Bounded, so an oversized number is a 422
+rather than an out-of-range error from the database."""
