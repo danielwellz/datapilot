@@ -70,3 +70,16 @@ class AnalyticsRepository:
             .mappings()
             .all()
         )
+
+    def product_ranking(
+        self, *, start_at: datetime, end_at: datetime, category: str | None, limit: int
+    ) -> Sequence[RowMapping]:
+        """Ranked products, columns named as in ``ProductRankOut``."""
+        return (
+            self._session.execute(
+                queries.PRODUCT_RANKING,
+                {"start_at": start_at, "end_at": end_at, "category": category, "limit": limit},
+            )
+            .mappings()
+            .all()
+        )

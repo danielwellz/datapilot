@@ -8,6 +8,8 @@ from app.api.security import BEARER_AUTH, require_access_token
 from app.api.spec import spec
 from app.extensions import db
 from app.schemas.analytics import (
+    ProductRankingOut,
+    ProductRankingQuery,
     RevenueMonthlyOut,
     RevenueMonthlyQuery,
     SummaryOut,
@@ -79,3 +81,21 @@ def top_customers(query: TopCustomersQuery) -> TopCustomersOut:
     country return more than `limit` customers.
     """
     return _service().top_customers(query, today=clock.utc_today())
+
+
+@analytics.get("/products")
+@spec.validate(
+    query=ProductRankingQuery,
+    resp=Response(HTTP_200=ProductRankingOut, HTTP_401=ErrorOut, HTTP_422=ErrorOut),
+    tags=_TAGS,
+    security=BEARER_AUTH,
+)
+@require_access_token
+def product_ranking(query: ProductRankingQuery) -> ProductRankingOut:
+    """Products ranked by paid revenue over the last `days` days, with units sold.
+
+    Each product also reports its share of its category's revenue, computed
+    over the whole category, not only the products returned. With
+    `category`, products are ranked within that category. Ties share a rank.
+    """
+    return _service().product_ranking(query, today=clock.utc_today())

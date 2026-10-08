@@ -6,10 +6,18 @@ never contains a partial day and comparisons between periods are fair.
 
 from datetime import date
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, WithJsonSchema
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    StringConstraints,
+    WithJsonSchema,
+)
 
+from app.models.product import CATEGORY_MAX_LENGTH
 from app.schemas.types import CountryCode, Money, UtcDatetime
 
 MAX_DAYS = 365
@@ -32,16 +40,25 @@ Change = Annotated[
     ),
 ]
 
+CategoryName = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=CATEGORY_MAX_LENGTH)
+]
+"""A product category exactly as ``/api/meta`` lists it."""
 
-class SummaryQuery(BaseModel):
-    model_config = ConfigDict(extra="forbid")
 
-    days: int = Field(
-        default=30,
+def _days_field(*, default: int) -> Any:
+    return Field(
+        default=default,
         ge=1,
         le=MAX_DAYS,
         description="Length of the period in whole UTC days, ending yesterday.",
     )
+
+
+class SummaryQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    days: int = _days_field(default=30)
 
 
 class RevenueMonthlyQuery(BaseModel):
@@ -68,12 +85,23 @@ class TopCustomersQuery(BaseModel):
         description="The worst rank returned in each country. Ties share a rank, "
         "so a country can return more customers than this.",
     )
-    days: int = Field(
-        default=365,
-        ge=1,
-        le=MAX_DAYS,
-        description="Length of the period in whole UTC days, ending yesterday.",
+    days: int = _days_field(default=365)
+
+
+class ProductRankingQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    category: CategoryName | None = Field(
+        default=None, description="Rank within this category only; every category when left out."
     )
+    limit: int = Field(
+        default=20,
+        ge=1,
+        le=MAX_RANK,
+        description="The worst rank returned. Ties share a rank, "
+        "so more products than this can be returned.",
+    )
+    days: int = _days_field(default=365)
 
 
 class PeriodOut(BaseModel):
@@ -144,3 +172,22 @@ class TopCustomersOut(BaseModel):
     """Customers ranked by revenue within each country, by country and then rank."""
 
     items: list[TopCustomerOut]
+
+
+class ProductRankOut(BaseModel):
+    rank: int = Field(description="Rank by revenue; ties share a rank.")
+    product_id: int
+    name: str
+    category: str
+    revenue: Money = Field(description="Paid revenue of the product's order lines.")
+    units: int = Field(description="Units sold in paid orders.")
+    category_share: Ratio | None = Field(
+        description="The product's share of its category's revenue; null if the category "
+        "earned nothing."
+    )
+
+
+class ProductRankingOut(BaseModel):
+    """Products ranked by revenue, best first."""
+
+    items: list[ProductRankOut]

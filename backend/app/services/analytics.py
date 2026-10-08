@@ -11,6 +11,9 @@ from app.schemas.analytics import (
     MoneyMetricOut,
     MonthlyRevenueOut,
     PeriodOut,
+    ProductRankingOut,
+    ProductRankingQuery,
+    ProductRankOut,
     RateMetricOut,
     RevenueMonthlyOut,
     RevenueMonthlyQuery,
@@ -101,6 +104,17 @@ class AnalyticsService:
             limit=query.limit,
         )
         return TopCustomersOut(items=[TopCustomerOut.model_validate(dict(row)) for row in rows])
+
+    def product_ranking(self, query: ProductRankingQuery, *, today: date) -> ProductRankingOut:
+        """Products ranked by paid revenue over the last ``query.days`` days."""
+        period = trailing_days(today, query.days)
+        rows = self._analytics.product_ranking(
+            start_at=period.start_at,
+            end_at=period.end_at,
+            category=query.category,
+            limit=query.limit,
+        )
+        return ProductRankingOut(items=[ProductRankOut.model_validate(dict(row)) for row in rows])
 
 
 def _average_order_value(totals: PeriodTotals) -> Decimal | None:
