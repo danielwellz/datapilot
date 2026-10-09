@@ -1,0 +1,109 @@
+:host {
+  display: block;
+}
+
+.composer {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.composer__question {
+  min-height: calc(3 * var(--leading-lead) + 2 * var(--space-3));
+  padding: var(--space-3);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  resize: vertical;
+}
+
+.composer__under {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+}
+
+.composer__counter {
+  font-variant-numeric: tabular-nums;
+}
+
+.composer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.composer__model {
+  flex: 0 1 22rem;
+  min-width: 0;
+}
+
+.composer__submit {
+  min-width: 8rem;
+}
+
+.composer__retry {
+  min-height: auto;
+  padding: 0 var(--space-1);
+  color: var(--color-signal);
+}
+
+.composer__examples {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.composer__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  // On a phone, eight stacked examples would push every answer off the
+  // first screen, so they become one row that scrolls sideways.
+  @media (max-width: 599.98px) {
+    flex-wrap: nowrap;
+    margin-inline: calc(-1 * var(--space-5));
+    padding: var(--space-half) var(--space-5);
+    overflow-x: auto;
+    scroll-padding-inline: var(--space-5);
+    scroll-snap-type: x proximity;
+
+    li {
+      flex: 0 0 min(16rem, 75%);
+      scroll-snap-align: start;
+    }
+
+    .composer__chip {
+      width: 100%;
+      height: 100%;
+    }
+  }
+}
+
+// Quiet text buttons: the examples suggest, the Ask button acts.
+.composer__chip {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-control);
+  background: var(--color-sheet);
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-state) var(--ease-out),
+    border-color var(--duration-state) var(--ease-out);
+
+  &:hover:not([aria-disabled='true']) {
+    border-color: var(--color-signal);
+    background: var(--color-signal-tint);
+  }
+
+  &[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}

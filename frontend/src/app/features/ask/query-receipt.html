@@ -1,0 +1,171 @@
+<article
+  class="receipt"
+  [class.receipt--failed]="failure() !== null"
+  [attr.aria-labelledby]="questionId"
+  [attr.aria-busy]="state().kind === 'pending'"
+>
+  <header class="receipt__head">
+    <span>Receipt {{ number() }}</span>
+    <time [attr.datetime]="askedAt()">{{ askedAtText() }}</time>
+  </header>
+
+  <h2 class="receipt__question" tabindex="-1" [id]="questionId">{{ entry().question }}</h2>
+
+  @if (state().kind === 'pending') {
+    <p class="receipt__status">
+      <!-- Announced once; the counter beside it changes every second and is not. -->
+      <span role="status">Asking {{ store.modelLabel(entry().modelId) }}.</span>
+      <span class="receipt__elapsed" aria-hidden="true">{{ elapsedSeconds() }} s</span>
+    </p>
+  }
+
+  @if (failure(); as failure) {
+    <!-- A live failure is announced; one recalled from history is just read. -->
+    <div class="receipt__failure" [attr.role]="state().kind === 'failed' ? 'alert' : null">
+      <p class="receipt__stamp">{{ failure.explanation.stamp }}</p>
+      <dl class="receipt__notes">
+        <dt>What happened</dt>
+        <dd>{{ failure.explanation.whatHappened }}</dd>
+        <dt>What to try</dt>
+        <dd>{{ failure.explanation.whatToTry }}</dd>
+      </dl>
+      @if (failure.explanation.detail; as detail) {
+        <p class="receipt__detail">{{ detail }}</p>
+      }
+      @if (failure.requestId; as requestId) {
+        <p class="request-id">Request ID {{ requestId }}</p>
+      }
+    </div>
+  }
+
+  @if (ledger(); as ledger) {
+    @if (ledger.explanation; as explanation) {
+      <p class="receipt__explanation">{{ explanation }}</p>
+    }
+
+    @if (ledger.model !== null || ledger.rows !== null || ledger.time !== null) {
+      <dl class="receipt__ledger receipt__section">
+        @if (ledger.model; as model) {
+          <div class="receipt__line">
+            <dt>Model</dt>
+            <dd>
+              {{ model }}
+              @if (ledger.fallbackNote; as note) {
+                <span class="receipt__note">{{ note }}</span>
+              }
+            </dd>
+          </div>
+        }
+        @if (ledger.rows; as rows) {
+          <div class="receipt__line">
+            <dt>Rows</dt>
+            <dd>{{ rows }}</dd>
+          </div>
+        }
+        @if (ledger.time; as time) {
+          <div class="receipt__line">
+            <dt>Time</dt>
+            <dd>{{ time }}</dd>
+          </div>
+        }
+        @if (ledger.repaired) {
+          <div class="receipt__line">
+            <dt>Corrected</dt>
+            <dd>Once, after the database refused the first query</dd>
+          </div>
+        }
+        @if (ledger.assumptions.length > 0) {
+          <div class="receipt__line">
+            <dt>Assumed</dt>
+            <dd>
+              <ol class="receipt__assumptions">
+                @for (assumption of ledger.assumptions; track $index) {
+                  <li>{{ assumption }}</li>
+                }
+              </ol>
+            </dd>
+          </div>
+        }
+      </dl>
+    }
+
+    @if (ledger.sql; as sql) {
+      <div class="receipt__section">
+        <dp-receipt-sql [sql]="sql" [label]="ledger.sqlLabel" />
+      </div>
+    }
+  }
+
+  @if (answer(); as answer) {
+    <div class="receipt__section">
+      @if (chart(); as chart) {
+        <!-- Chart.js loads only once a receipt with a chart is in view. -->
+        @defer (on viewport; prefetch on idle) {
+          <dp-chart [spec]="chart.spec" [height]="chart.height" />
+        } @placeholder {
+          <div class="receipt__chart-placeholder" [style.height.px]="chart.height"></div>
+        }
+      }
+      <dp-result-table
+        [columns]="answer.columns"
+        [rows]="answer.rows"
+        [label]="'Result of: ' + entry().question"
+      />
+      @if (answer.truncated) {
+        <p class="receipt__note">
+          Showing the first {{ formatCount(answer.row_count) }} rows, the most one answer returns.
+          More rows matched: ask for fewer, for example a top 10 or a shorter period.
+        </p>
+      }
+    </div>
+  }
+
+  @if (state().kind === 'recalled') {
+    <div class="receipt__section receipt__actions">
+      <p class="receipt__note">
+        From your history. Results aren't kept, so run the question again to see them.
+      </p>
+      <button
+        class="button"
+        type="button"
+        [attr.aria-disabled]="!store.canAsk()"
+        (click)="askAgain()"
+      >
+        Run again
+      </button>
+    </div>
+  }
+
+  @if (state().kind === 'failed' && failure(); as failure) {
+    @if (failure.explanation.remedies.retry || failure.explanation.remedies.otherModel) {
+      <div class="receipt__section receipt__actions">
+        @if (failure.explanation.remedies.retry) {
+          <button
+            class="button"
+            type="button"
+            [attr.aria-disabled]="!store.canAsk() || retryWait() > 0"
+            (click)="askAgain()"
+          >
+            @if (retryWait() > 0) {
+              Ask again in {{ retryWait() }} s
+            } @else {
+              Ask again
+            }
+          </button>
+        }
+        @if (failure.explanation.remedies.otherModel) {
+          @for (model of otherModels(); track model.id) {
+            <button
+              class="button"
+              type="button"
+              [attr.aria-disabled]="!store.canAsk()"
+              (click)="askAgain(model.id)"
+            >
+              Ask {{ model.label }} instead
+            </button>
+          }
+        }
+      </div>
+    }
+  }
+</article>

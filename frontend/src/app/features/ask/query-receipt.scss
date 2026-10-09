@@ -1,0 +1,197 @@
+// The query receipt: the product's one memorable element (docs/design.md).
+// Three details set it apart, each with a job: the perforated top edge marks
+// where one answer ends and the next begins, dashed rules separate its
+// sections, and a ledger with dotted leaders lines labels up with values.
+
+:host {
+  display: block;
+}
+
+.receipt {
+  // Half circles cut from the top edge, one per pitch. The cut is a mask;
+  // a ring in the rule color outlines each cut, so the edge reads on a
+  // paper color barely different from the sheet.
+  --notch: 5px;
+  --notch-pitch: 16px;
+  --receipt-padding: var(--space-5);
+
+  display: grid;
+  gap: var(--space-4);
+  padding: calc(var(--receipt-padding) + var(--notch)) var(--receipt-padding) var(--receipt-padding);
+  border: 1px solid var(--color-rule);
+  border-radius: 0 0 var(--radius-sheet) var(--radius-sheet);
+  background:
+    radial-gradient(
+        circle at 50% 0,
+        transparent calc(var(--notch) - 1px),
+        var(--color-rule) calc(var(--notch) - 1px),
+        var(--color-rule) var(--notch),
+        transparent calc(var(--notch) + 0.5px)
+      )
+      0 0 / var(--notch-pitch) calc(var(--notch) + 1px) repeat-x border-box,
+    var(--color-sheet);
+  mask: radial-gradient(
+      circle at 50% 0,
+      transparent calc(var(--notch) - 1px),
+      #000 calc(var(--notch) - 0.5px)
+    )
+    0 0 / var(--notch-pitch) 100% repeat-x border-box;
+
+  @media (max-width: 599.98px) {
+    --receipt-padding: var(--space-4);
+  }
+}
+
+.receipt__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+  color: var(--color-graphite);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.receipt__question {
+  font-size: var(--text-section);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-section);
+  overflow-wrap: anywhere;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.receipt__explanation {
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+}
+
+.receipt__section {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--color-control-border);
+}
+
+.receipt__status {
+  display: flex;
+  gap: var(--space-3);
+  color: var(--color-graphite);
+  font-family: var(--font-mono);
+}
+
+.receipt__elapsed {
+  font-variant-numeric: tabular-nums;
+}
+
+// Label, dotted leader, value: the line items of a printed slip.
+.receipt__ledger {
+  --label-width: 12ch;
+
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-table);
+  line-height: var(--leading-table);
+
+  @media (max-width: 599.98px) {
+    --label-width: 10ch;
+  }
+}
+
+.receipt__line {
+  display: flex;
+  align-items: baseline;
+
+  dt {
+    display: flex;
+    flex: 0 0 var(--label-width);
+    align-items: baseline;
+    color: var(--color-graphite);
+
+    &::after {
+      content: '';
+      flex: 1;
+      min-width: 1ch;
+      margin: 0 1ch;
+      border-bottom: 1px dotted var(--color-control-border);
+    }
+  }
+
+  dd {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.receipt__note {
+  display: block;
+  color: var(--color-graphite);
+}
+
+.receipt__assumptions {
+  margin: 0;
+  padding-inline-start: 3ch;
+}
+
+.receipt__failure {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+// A rubber stamp on the slip: the one place the receipt uses the error
+// color, always with what happened written beside it.
+.receipt__stamp {
+  padding: var(--space-half) var(--space-2);
+  border: 2px solid var(--color-error);
+  border-radius: var(--radius-control);
+  color: var(--color-error);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
+}
+
+.receipt__notes {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+
+  dt {
+    color: var(--color-graphite);
+    font-family: var(--font-mono);
+    font-size: var(--text-caption);
+    line-height: var(--leading-caption);
+  }
+
+  dd {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-lead);
+    line-height: var(--leading-lead);
+  }
+}
+
+.receipt__detail {
+  color: var(--color-graphite);
+  font-family: var(--font-mono);
+  font-size: var(--text-table);
+  line-height: var(--leading-table);
+  overflow-wrap: anywhere;
+}
+
+.receipt__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+
+  .receipt__note {
+    flex-basis: 100%;
+  }
+}

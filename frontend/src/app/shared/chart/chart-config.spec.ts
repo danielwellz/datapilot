@@ -1,6 +1,6 @@
 import type { TooltipItem } from 'chart.js';
 
-import { ChartKind, ChartSpec, buildChartConfig } from './chart-config';
+import { ChartKind, ChartSpec, buildChartConfig, shortenLabel } from './chart-config';
 import { ChartTokens } from './chart-tokens';
 
 const TOKENS: ChartTokens = {
@@ -166,5 +166,14 @@ describe('buildChartConfig', () => {
     expect(callbacks.title([])).toBe('');
     expect(callbacks.footer([])).toEqual([]);
     expect(callbacks.label({ datasetIndex: 5, dataIndex: 0 })).toBe('');
+  });
+});
+
+describe('shortenLabel', () => {
+  it('shortens a long label with an ellipsis and leaves a short one', () => {
+    expect(shortenLabel('Noise-cancelling headphones for travel')).toBe('Noise-cancelling head…');
+    expect(shortenLabel('Harbor Backpack')).toBe('Harbor Backpack');
+    expect(shortenLabel('abcdef', 4)).toBe('abc…');
+    expect(shortenLabel('ab  cdef', 4)).toBe('ab…');
   });
 });

@@ -1,0 +1,109 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.history {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-sheet);
+  background: var(--color-sheet);
+}
+
+.history__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.history__title {
+  font-size: var(--text-lead);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-lead);
+}
+
+.history__body {
+  display: none;
+  gap: var(--space-3);
+}
+
+.history__body--open {
+  display: grid;
+}
+
+// Wide screens have room for the list beside the thread: always open.
+@media (min-width: 1100px) {
+  .history__toggle {
+    display: none;
+  }
+
+  .history__body {
+    display: grid;
+  }
+}
+
+.history__state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  color: var(--color-graphite);
+}
+
+.history__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li + li {
+    border-top: 1px solid var(--color-rule);
+  }
+}
+
+.history__item {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-2) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-state) var(--ease-out);
+
+  &:hover {
+    background: var(--color-signal-tint);
+  }
+}
+
+// Two lines of the question; the receipt shows it whole.
+.history__question {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.history__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  color: var(--color-graphite);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.history__outcome--failed {
+  color: var(--color-error);
+}
+
+.history__more {
+  justify-self: start;
+}

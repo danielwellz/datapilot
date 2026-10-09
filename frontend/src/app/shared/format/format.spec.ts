@@ -6,7 +6,10 @@ import {
   countryName,
   formatChange,
   formatCompactMoney,
+  formatCompactNumber,
   formatCount,
+  formatDecimal,
+  formatDuration,
   formatDayRange,
   formatMoney,
   formatMonth,
@@ -65,6 +68,28 @@ describe('formatting', () => {
     it('groups counts and writes a true minus sign', () => {
       expect(formatCount(69_500)).toBe('69,500');
       expect(formatCount(-3)).toBe('−3');
+    });
+
+    it('groups a decimal and keeps every digit and its scale', () => {
+      expect(formatDecimal('1234567.125')).toBe('1,234,567.125');
+      expect(formatDecimal('90071992547409930.01')).toBe('90,071,992,547,409,930.01');
+      expect(formatDecimal('-5.50')).toBe('−5.50');
+      expect(formatDecimal(42)).toBe('42');
+      expect(formatDecimal(0.25)).toBe('0.25');
+    });
+
+    it('shortens a number for a chart axis', () => {
+      expect(formatCompactNumber(7_512_345.67)).toBe('7.5M');
+      expect(formatCompactNumber(950)).toBe('950');
+      expect(formatCompactNumber(-1200)).toBe('−1.2K');
+    });
+
+    it('formats a duration in milliseconds below a second and in seconds above', () => {
+      expect(formatDuration(214)).toBe('214 ms');
+      expect(formatDuration(999.6)).toBe('1 s');
+      expect(formatDuration(1000)).toBe('1 s');
+      expect(formatDuration(2449)).toBe('2.4 s');
+      expect(formatDuration(12_000)).toBe('12 s');
     });
 
     it.each([

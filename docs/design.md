@@ -194,11 +194,48 @@ Every chart goes through one Chart.js wrapper (`frontend/src/app/shared/chart/`)
 - **Charts below the fold wait until they are in view.** Their data loads with everything else; their code and drawing are deferred. Placeholders are as tall as the panels that replace them.
 - **Key numbers** are figures in one ruled sheet, five across when they fit and otherwise in three or two columns, each with its change and the previous value ("+2.6% from 65,586"). Figure size follows the cell's width, so a 90-day revenue with cents always fits.
 
-## The query receipt (Stage 10)
+## The query receipt
 
-Each answer in Ask your data is presented as a query receipt: the question, the explanation, the SQL, the model that answered, the row count and the time, then the results. It is set in Plex Mono for SQL and metadata, ruled like a printed slip, with a perforated top edge.
+Each answer in Ask your data is presented as a query receipt. It is the one place with ornamental detail, and each detail has a job. If a detail stops doing its job, it goes.
 
-Keep the printed-slip details (the perforated edge, the ruling) subtle and functional, so the receipt reads as crafted rather than decorative. The ruling separates the receipt's sections; the edge marks where one answer ends and the next begins. If a detail stops doing a job, it goes.
+```
+ ◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠◠
+ Receipt 000124                  Oct 9, 2026, 14:02 UTC
+ What was the monthly revenue over the last 12 months?
+ Revenue from paid orders in each of the last 12 complete months.
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ Model ........ GPT-OSS 120B (Groq)
+ Rows ......... 12
+ Time ......... 214 ms
+ Assumed ...... 1. The current month is left out because it is not complete yet.
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ ▸ Show SQL that ran (13 lines)   Copy SQL
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ chart (when it fits), then the result table
+```
+
+- **A perforated top edge** marks where one answer ends and the next begins. Half circles are cut from the edge with a CSS mask, and each cut is outlined in the rule color, because the light theme's paper is too close to the sheet for the cut alone to show.
+- **Dashed rules** separate the receipt's sections. Everything else in the app uses solid rules, so the dashes alone make it read as a printed slip.
+- **A ledger in Plex Mono with dotted leaders** lines labels up with values, like line items. Lines without a value are left out.
+- **The receipt number is the audit id**, the same number the history and the backend's logs use. A question the backend never recorded (a rate limit, a network failure) says "Receipt not recorded".
+- **The SQL is collapsed** until asked for, then numbered and lightly highlighted: keywords by weight, literals in graphite. No hue, because cobalt means "you can act here" and green and red mean changes. It is model output, so it is split into text spans and never rendered as HTML.
+- **Everything else on the page stays quiet:** the composer and history are plain sheets with solid rules and Plex Sans.
+
+### Questions without an answer
+
+A question that was not answered keeps its receipt. A stamp says what became of it in a word or two (Refused, Not answered, Stopped, Failed, Limit reached, Not sent), set in the error color with a written explanation beside it: "What happened" and "What to try". The words are written per error code in the client, so a question recalled from history, which keeps only its code, reads the same as a live one. The server's message is used where it adds specifics, such as the model's own reason or the database's error.
+
+The receipt offers its ways out as buttons: "Ask again" (counting down `Retry-After` when the user or the provider is rate limited) and "Ask … instead" for up to three other models.
+
+## Ask your data
+
+- **One question at a time.** While a question is pending, the Ask button says "Asking…" and the receipt shows the model asked and the seconds so far. Only the first line is announced to screen readers, not the ticking counter.
+- **Newest first, under the composer.** The latest answer is always just below the question box, so nothing scrolls away on its own.
+- **A chart only when the result fits it.** The model suggests bar, line or none; the client draws it only for exactly two columns, one of them a number, with text or dates and 1 to 50 rows for bars, dates and at least two rows for a line, no missing values, and a complete result. Text categories are horizontal bars in the SQL's order; a line is sorted by date. The table is always shown below, so the chart never carries numbers the table lacks.
+- **Results scroll inside the receipt.** Up to 12 rows show at once; more than 100 rows scroll virtually, with `aria-rowcount` and `aria-rowindex` so a screen reader still knows the size.
+- **History shows, never re-runs.** Choosing an earlier question shows its stored receipt at the top of the thread and moves focus to it. Rows are not kept, so it offers "Run again".
+- **Buttons that wait stay focusable.** A button unavailable only for a moment (a pending question, a countdown) uses `aria-disabled` rather than `disabled`, so keyboard focus is not dropped to the page.
+- **On phones**, the example questions are one row that scrolls sideways, and the history folds under its heading between the composer and the answers.
 
 ## Checked against generic tells
 

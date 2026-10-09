@@ -1,0 +1,106 @@
+.receipt-sql {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.receipt-sql__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+// A disclosure in the receipt's voice: mono, with a marker that turns.
+.receipt-sql__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-signal);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+
+  &::before {
+    content: '';
+    width: 0;
+    height: 0;
+    border-block: 4px solid transparent;
+    border-inline-start: 6px solid currentcolor;
+    transition: transform var(--duration-state) var(--ease-out);
+  }
+
+  &[aria-expanded='true']::before {
+    transform: rotate(90deg);
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.receipt-sql__count {
+  color: var(--color-graphite);
+  font-weight: var(--weight-regular);
+}
+
+.receipt-sql__copy {
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-caption);
+}
+
+.receipt-sql__copied {
+  color: var(--color-graphite);
+  font-size: var(--text-caption);
+}
+
+.receipt-sql__code {
+  margin: 0;
+  padding: var(--space-3) 0;
+  overflow-x: auto;
+  border-radius: var(--radius-control);
+  background: var(--color-paper);
+  font-family: var(--font-mono);
+  font-size: var(--text-table);
+  line-height: var(--leading-table);
+  white-space: pre;
+  tab-size: 2;
+}
+
+.receipt-sql__line {
+  display: block;
+  padding-inline-end: var(--space-3);
+}
+
+// Line numbers are not part of the SQL: they are skipped by a selection
+// and by screen readers.
+.receipt-sql__number {
+  display: inline-block;
+  width: 3.5ch;
+  margin-inline-end: var(--space-3);
+  padding-inline-end: var(--space-2);
+  border-inline-end: 1px solid var(--color-rule);
+  color: var(--color-graphite);
+  text-align: right;
+  user-select: none;
+}
+
+// Light highlighting: structure by weight, literals in graphite. No hue,
+// because cobalt means "you can act here" and green and red mean changes.
+.sql-keyword {
+  font-weight: var(--weight-medium);
+}
+
+.sql-string,
+.sql-number,
+.sql-comment {
+  color: var(--color-graphite);
+}
+
+.sql-comment {
+  font-style: italic;
+}

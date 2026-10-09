@@ -34,8 +34,7 @@ export const routes: Routes = [
       },
       {
         path: 'ask',
-        title: 'Ask your data',
-        loadComponent: () => import('./features/ask/ask-page').then((m) => m.AskPage),
+        loadChildren: () => import('./features/ask/ask.routes').then((m) => m.ASK_ROUTES),
       },
       {
         path: '**',
