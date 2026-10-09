@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { DashboardParams, paramsFromQuery, paramsToQuery } from './dashboard-params';
 import { DashboardStore } from './dashboard.store';
+import { CohortHeatmap } from './cohort-heatmap';
 import { KpiRow } from './kpi-row';
 import { ProductRanking } from './product-ranking';
 import { RevenueChart } from './revenue-chart';
@@ -16,7 +17,7 @@ import { TopCustomers } from './top-customers';
  */
 @Component({
   selector: 'dp-dashboard-page',
-  imports: [KpiRow, ProductRanking, RevenueChart, TopCustomers],
+  imports: [CohortHeatmap, KpiRow, ProductRanking, RevenueChart, TopCustomers],
   providers: [DashboardStore],
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',

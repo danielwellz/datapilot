@@ -46,4 +46,12 @@
       </section>
     }
   </div>
+
+  @defer (on viewport; prefetch on idle) {
+    <dp-cohort-heatmap [panel]="store.cohorts" />
+  } @placeholder {
+    <section class="panel deferred deferred--cohorts" aria-label="Retention by signup month">
+      <p class="panel__placeholder">Loading the retention cohorts…</p>
+    </section>
+  }
 </section>

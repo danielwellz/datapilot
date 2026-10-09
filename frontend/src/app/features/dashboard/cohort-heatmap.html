@@ -1,0 +1,92 @@
+<section
+  class="panel"
+  aria-labelledby="cohorts-title"
+  [attr.aria-busy]="panel().status() === 'loading'"
+>
+  <header class="panel__header">
+    <div>
+      <h2 id="cohorts-title" class="panel__title">Retention by signup month</h2>
+      <p class="panel__period">{{ period() }}</p>
+    </div>
+  </header>
+
+  @switch (view()) {
+    @case ('failed') {
+      <dp-panel-error
+        subject="The retention cohorts"
+        [error]="panel().error()"
+        (retry)="panel().retry()"
+      />
+    }
+    @case ('loading') {
+      <p class="panel__placeholder cohorts__placeholder">Loading the retention cohorts…</p>
+    }
+    @case ('empty') {
+      <p class="state">No customer signed up in these months.</p>
+    }
+    @default {
+      <div class="panel__body cohorts" [class.panel__body--stale]="panel().stale()">
+        <p class="cohorts__lead">
+          Each cell is the share of a month's new customers who placed a paid order that many months
+          after signing up. Month 0 is the signup month itself.
+        </p>
+
+        <div class="legend" role="group" aria-labelledby="cohorts-legend-title">
+          <p id="cohorts-legend-title" class="legend__range">{{ range() }}</p>
+          <ul class="legend__steps">
+            @for (entry of legend(); track entry.step) {
+              <li class="legend__step">
+                <span
+                  class="legend__swatch"
+                  [class]="'heat--' + entry.step"
+                  aria-hidden="true"
+                ></span
+                >{{ entry.label }}
+              </li>
+            }
+          </ul>
+        </div>
+
+        <div class="table-scroll" role="region" aria-labelledby="cohorts-caption" tabindex="0">
+          <table class="data-table heatmap">
+            <caption id="cohorts-caption" class="visually-hidden">
+              Share of each signup month's customers with a paid order, by months since signup
+            </caption>
+            <thead>
+              <tr>
+                <td colspan="2"></td>
+                <th scope="colgroup" [attr.colspan]="columns().length" class="heatmap__group">
+                  Months since signup
+                </th>
+              </tr>
+              <tr>
+                <th scope="col" class="heatmap__cohort">Signup month</th>
+                <th scope="col" class="data-table__number">Customers</th>
+                @for (column of columns(); track column) {
+                  <th scope="col" class="heatmap__month">
+                    <span class="visually-hidden">Month </span>{{ column }}
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.month) {
+                <tr>
+                  <th scope="row" class="heatmap__cohort">{{ row.label }}</th>
+                  <td class="data-table__number heatmap__size">{{ row.customers }}</td>
+                  @for (cell of row.cells; track $index) {
+                    @if (cell.text === null) {
+                      <td class="heat heat--none"></td>
+                    } @else {
+                      <td class="heat" [class]="'heat--' + cell.step">{{ cell.text }}</td>
+                    }
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+</section>

@@ -125,6 +125,7 @@ describe('DashboardPage', () => {
       'Loading monthly revenue…',
     );
     expect(page.querySelector('dp-product-ranking')).toBeNull();
+    expect(page.querySelector('dp-cohort-heatmap')).toBeNull();
 
     for (const block of await harness.fixture.getDeferBlocks()) {
       await block.render(DeferBlockState.Complete);
@@ -133,6 +134,9 @@ describe('DashboardPage', () => {
     expect(page.querySelector('.deferred--revenue')).toBeNull();
     expect(page.querySelector('dp-revenue-chart h2')?.textContent).toBe('Monthly revenue');
     expect(page.querySelector('dp-product-ranking h2')?.textContent).toBe('Top products');
+    expect(page.querySelector('dp-cohort-heatmap h2')?.textContent).toBe(
+      'Retention by signup month',
+    );
   });
 
   it('puts a chosen country in the URL and loads its top customers', async () => {
