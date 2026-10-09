@@ -36,10 +36,13 @@
               <button
                 class="history__item"
                 type="button"
+                [attr.aria-labelledby]="'history-question-' + item.id"
                 [attr.aria-describedby]="'history-meta-' + item.id"
                 (click)="selected.emit(item)"
               >
-                <span class="history__question">{{ item.question }}</span>
+                <span class="history__question" [id]="'history-question-' + item.id">{{
+                  item.question
+                }}</span>
                 <span class="history__meta" [id]="'history-meta-' + item.id">
                   <span
                     class="history__outcome"

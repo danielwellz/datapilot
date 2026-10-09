@@ -238,9 +238,13 @@ describe('AskComposer', () => {
     await press({});
     await fixture.whenStable();
 
-    expect(submitButton().disabled).toBe(true);
+    expect(submitButton().getAttribute('aria-disabled')).toBe('true');
     expect(submitButton().textContent.trim()).toBe('Asking…');
-    expect(element.querySelector<HTMLButtonElement>('.composer__chip')?.disabled).toBe(true);
+    const chip = element.querySelector<HTMLButtonElement>('.composer__chip');
+    expect(chip?.getAttribute('aria-disabled')).toBe('true');
+    // Still focusable, so focus stays put; pressing it asks nothing.
+    expect(chip?.disabled).toBe(false);
+    chip?.click();
     await type('Another question');
     await press({});
 
@@ -267,7 +271,7 @@ describe('AskComposer', () => {
       await fixture.whenStable();
 
       expect(submitButton().textContent.trim()).toBe('Ask in 5 s');
-      expect(submitButton().disabled).toBe(true);
+      expect(submitButton().getAttribute('aria-disabled')).toBe('true');
 
       vi.advanceTimersByTime(5000);
       await fixture.whenStable();

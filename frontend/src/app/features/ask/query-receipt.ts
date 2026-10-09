@@ -194,8 +194,16 @@ export class QueryReceipt {
 
   protected readonly formatCount = formatCount;
 
-  /** Asks the same question again, with `modelId` or the model it was asked of. */
+  /**
+   * Asks the same question again, with `modelId` or the model it was asked
+   * of. The buttons stay focusable while asking is blocked, so a press then
+   * does nothing; the store refuses while a question is pending or the
+   * user's limit holds, and this provider's own wait is checked here.
+   */
   protected askAgain(modelId: string | null = this.entry().modelId): void {
+    if (modelId === this.entry().modelId && this.retryWait() > 0) {
+      return;
+    }
     this.store.ask(this.entry().question, modelId);
   }
 

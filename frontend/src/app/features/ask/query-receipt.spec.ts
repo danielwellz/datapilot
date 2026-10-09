@@ -322,6 +322,11 @@ describe('QueryReceipt for a question without an answer', () => {
     return found;
   }
 
+  /** Shown as unavailable but still focusable, so pressing it keeps focus where it is. */
+  function unavailable(candidate: HTMLButtonElement): boolean {
+    return candidate.getAttribute('aria-disabled') === 'true' && !candidate.disabled;
+  }
+
   function notes(): string[] {
     return [...element.querySelectorAll('.receipt__notes dd')].map((dd) => dd.textContent.trim());
   }
@@ -384,13 +389,13 @@ describe('QueryReceipt for a question without an answer', () => {
 
     expect(text('.receipt__head span')).toBe('Receipt not recorded');
     expect(text('.receipt__stamp')).toBe('Limit reached');
-    expect(button('Ask again in 42 s').disabled).toBe(true);
+    expect(unavailable(button('Ask again in 42 s'))).toBe(true);
     expect(element.querySelector('.receipt__ledger')).toBeNull();
 
     vi.advanceTimersByTime(42_000);
     await fixture.whenStable();
 
-    expect(button('Ask again').disabled).toBe(false);
+    expect(unavailable(button('Ask again'))).toBe(false);
   });
 
   it("waits for a provider's limit but offers other models at once", async () => {
@@ -408,12 +413,14 @@ describe('QueryReceipt for a question without an answer', () => {
     expect(notes()[0]).toBe(
       'The provider of Demo model is rate limiting requests. Try again in 20 seconds, or pick another model.',
     );
-    expect(button('Ask again in 20 s').disabled).toBe(true);
-    expect(button('Ask GPT-OSS 120B (Groq) instead').disabled).toBe(false);
+    expect(unavailable(button('Ask again in 20 s'))).toBe(true);
+    button('Ask again in 20 s').click();
+    http.expectNone(`${AI_URL}/ask`);
+    expect(unavailable(button('Ask GPT-OSS 120B (Groq) instead'))).toBe(false);
 
     vi.advanceTimersByTime(20_000);
     await fixture.whenStable();
-    expect(button('Ask again').disabled).toBe(false);
+    expect(unavailable(button('Ask again'))).toBe(false);
   });
 
   it('asks the same question of the same model again after a network failure', async () => {
@@ -437,7 +444,10 @@ describe('QueryReceipt for a question without an answer', () => {
     store.ask('Another question?');
     await fixture.whenStable();
 
-    expect(buttons().every((candidate) => candidate.disabled)).toBe(true);
+    expect(buttons().every(unavailable)).toBe(true);
+    buttons().forEach((candidate) => {
+      candidate.click();
+    });
     http.expectOne(`${AI_URL}/ask`).flush(askOut());
   });
 

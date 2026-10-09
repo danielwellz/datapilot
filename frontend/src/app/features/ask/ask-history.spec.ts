@@ -104,6 +104,9 @@ describe('AskHistory', () => {
       ['Refused', 'Oct 8, 2026, 12:00 UTC'],
     ]);
     expect(items()[1]?.querySelector('.history__outcome--failed')).not.toBeNull();
+    // Named by the question alone; the outcome and time describe it, read once.
+    expect(items()[0]?.getAttribute('aria-labelledby')).toBe('history-question-121');
+    expect(element.querySelector('#history-question-121')?.textContent).toBe('Newest?');
     expect(items()[0]?.getAttribute('aria-describedby')).toBe('history-meta-121');
   });
 
