@@ -22,3 +22,9 @@
   border-radius: var(--radius-sheet);
   background: var(--color-sheet);
 }
+
+// A sheet whose content (a table, for example) runs to its edges.
+.sheet--flush {
+  padding: 0;
+  overflow: hidden;
+}

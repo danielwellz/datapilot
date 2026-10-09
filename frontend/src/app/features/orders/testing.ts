@@ -1,3 +1,5 @@
+import { TestRequest } from '@angular/common/http/testing';
+
 import { OrderOut, OrderPageOut, OrderSummaryOut } from '../../core/api/models';
 
 /** Builders for orders test data, shared by the orders specs. */
@@ -50,4 +52,12 @@ export function orderOut(overrides: Partial<OrderOut> = {}): OrderOut {
     ],
     ...overrides,
   };
+}
+
+/** Answers a request with the backend's error envelope. */
+export function failWith(request: TestRequest, status: number, code: string): void {
+  request.flush(
+    { error: { code, message: `Failed with ${code}.`, details: [], request_id: 'req-1' } },
+    { status, statusText: 'Error' },
+  );
 }

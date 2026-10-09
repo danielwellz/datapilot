@@ -9,7 +9,7 @@ import { TestBed } from '@angular/core/testing';
 import { NO_FILTERS, OrderFilters } from './order-filters';
 import { ORDERS_URL } from './orders-api';
 import { OrdersStore, PAGE_SIZE } from './orders.store';
-import { orderPage } from './testing';
+import { failWith, orderPage } from './testing';
 
 const PAID: OrderFilters = { ...NO_FILTERS, statuses: ['paid'] };
 const GERMANY: OrderFilters = { ...NO_FILTERS, country: 'DE' };
@@ -36,13 +36,6 @@ describe('OrdersStore', () => {
 
   function param(request: TestRequest, name: string): string | null {
     return request.request.params.get(name);
-  }
-
-  function fail(request: TestRequest, status: number, code: string): void {
-    request.flush(
-      { error: { code, message: `Failed with ${code}.`, details: [], request_id: 'req-1' } },
-      { status, statusText: 'Error' },
-    );
   }
 
   /** Loads a first page of `ids` for `filters` with a cursor to more. */
@@ -159,7 +152,7 @@ describe('OrdersStore', () => {
     showFirstPage(PAID, [5, 4]);
 
     store.applyFilters(GERMANY);
-    fail(expectList(), 500, 'internal_error');
+    failWith(expectList(), 500, 'internal_error');
 
     expect(store.status()).toBe('failed');
     expect(store.error()?.message).toBe('Failed with internal_error.');
@@ -169,7 +162,7 @@ describe('OrdersStore', () => {
 
   it('retries a failed first page with the same filters', () => {
     store.applyFilters(GERMANY);
-    fail(expectList(), 503, 'unavailable');
+    failWith(expectList(), 503, 'unavailable');
 
     store.retry();
     expect(store.status()).toBe('loading');
@@ -203,7 +196,7 @@ describe('OrdersStore', () => {
   it('starts again from the first page when the server refuses the cursor', () => {
     showFirstPage(PAID, [5, 4]);
     store.loadMore();
-    fail(expectList(), 400, 'invalid_cursor');
+    failWith(expectList(), 400, 'invalid_cursor');
 
     expect(store.status()).toBe('loading');
     const request = expectList();
