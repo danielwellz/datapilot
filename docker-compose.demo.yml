@@ -7,8 +7,9 @@
 # come from .env. Without any key, Ask your data uses the demo model.
 #
 # Base images come from Amazon ECR Public, which mirrors Docker Hub's
-# official images with the same digests without Docker Hub's anonymous
-# pull limit, which CI runners share.
+# official images with the same digests. Both registries throttle anonymous
+# pulls, so `make demo` first pulls missing images one at a time, with
+# retries (`make demo-pull`).
 
 name: datapilot-demo
 

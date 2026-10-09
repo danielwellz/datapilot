@@ -24,13 +24,15 @@ DEMO_SECRETS := DEMO_SECRET_KEY DEMO_JWT_SECRET_KEY DEMO_POSTGRES_PASSWORD \
 # plus the write-ahead log it writes before checkpoints recycle it.
 FULL_SCALE_ORDERS := 2000000
 DEMO_FULL_MIN_FREE_GB := 6
+# `make demo-pull`: tries per image, waiting 10, 20, 30… seconds between them.
+DEMO_PULL_ATTEMPTS := 5
 
 .PHONY: help up down logs reset-db \
 	be-install be-dev be-stop be-test be-lint be-format be-typecheck \
 	db-migrate db-upgrade db-roles seed explain explain-analytics bench eval-ask \
 	fe-install fe-dev fe-test fe-lint fe-format fe-build \
 	e2e-install e2e e2e-typecheck screenshots \
-	hooks check demo demo-full-data demo-down demo-reset demo-logs
+	hooks check demo demo-pull demo-full-data demo-down demo-reset demo-logs
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -169,6 +171,7 @@ check: be-lint be-typecheck be-test fe-lint fe-test fe-build e2e-typecheck ## Ru
 
 demo: .env.demo ## Build and run the production-like stack at http://localhost:8080 [scale=full]
 	@test -f .env || { echo "Create .env first: cp .env.example .env"; exit 1; }
+	@$(MAKE) --no-print-directory demo-pull
 	@case "$(scale)" in \
 		small) ;; \
 		full) $(MAKE) --no-print-directory demo-full-data ;; \
@@ -177,6 +180,30 @@ demo: .env.demo ## Build and run the production-like stack at http://localhost:8
 	$(DEMO_COMPOSE) up --build --detach --wait
 	@echo "DataPilot is running at http://localhost:8080"
 	@echo "Log in as demo@datapilot.dev with the password DataPilot-demo-2026."
+
+# Registries throttle anonymous pulls per address (Docker Hub per hour, ECR
+# Public per second), and CI runners share addresses. Compose and BuildKit
+# pull the stack's images all at once and give up on the first refusal, so
+# this pulls each missing image one at a time and retries with a growing
+# wait. Images already present are not looked up again: Compose and the
+# build then use the local copies without asking the registry.
+demo-pull: .env.demo
+	@images=$$( { $(DEMO_COMPOSE) config --images; \
+		awk '/^FROM / { print $$2 }' $(BACKEND)/Dockerfile $(FRONTEND)/Dockerfile; } \
+		| grep / | sort -u ); \
+	for image in $$images; do \
+		docker image inspect "$$image" > /dev/null 2>&1 && continue; \
+		attempt=1; \
+		until docker pull --quiet "$$image"; do \
+			if [ "$$attempt" -ge $(DEMO_PULL_ATTEMPTS) ]; then \
+				echo "Could not pull $$image after $$attempt attempts." >&2; \
+				exit 1; \
+			fi; \
+			echo "Pulling $$image failed; retrying in $$((attempt * 10)) s." >&2; \
+			sleep $$((attempt * 10)); \
+			attempt=$$((attempt + 1)); \
+		done; \
+	done
 
 # Loads the full dataset before the API starts: the seed truncates the sales
 # tables in one transaction, so a running API would wait on its locks and
