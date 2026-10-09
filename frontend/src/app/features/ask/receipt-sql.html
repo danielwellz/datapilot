@@ -1,0 +1,49 @@
+<div class="receipt-sql">
+  <div class="receipt-sql__bar">
+    <button
+      class="receipt-sql__toggle"
+      type="button"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-controls]="regionId"
+      (click)="toggle()"
+    >
+      {{ expanded() ? 'Hide' : 'Show' }} {{ label() }}
+      <span class="receipt-sql__count"
+        >({{ lines().length }} {{ lines().length === 1 ? 'line' : 'lines' }})</span
+      >
+    </button>
+    <button class="button button--quiet receipt-sql__copy" type="button" (click)="copy()">
+      Copy SQL
+    </button>
+    <span class="receipt-sql__copied" role="status">
+      @switch (copyState()) {
+        @case ('copied') {
+          Copied to the clipboard.
+        }
+        @case ('failed') {
+          Copying failed. Open the SQL and select it instead.
+        }
+      }
+    </span>
+  </div>
+  @if (expanded()) {
+    <!-- Not a <pre>: Angular keeps whitespace in one, so this template's own
+         indentation would show. The code's spaces are in the token texts. -->
+    <div
+      class="receipt-sql__code"
+      role="region"
+      tabindex="0"
+      [id]="regionId"
+      [attr.aria-label]="label()"
+    >
+      @for (line of lines(); track $index) {
+        <span class="receipt-sql__line">
+          <span class="receipt-sql__number" aria-hidden="true">{{ $index + 1 }}</span>
+          @for (token of line; track $index) {
+            <span [class]="'sql-' + token.kind">{{ token.text }}</span>
+          }
+        </span>
+      }
+    </div>
+  }
+</div>

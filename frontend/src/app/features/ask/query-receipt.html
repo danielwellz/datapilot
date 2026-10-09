@@ -1,0 +1,68 @@
+<article
+  class="receipt"
+  [attr.aria-labelledby]="questionId"
+  [attr.aria-busy]="state().kind === 'pending'"
+>
+  <header class="receipt__head">
+    <span>Receipt {{ number() }}</span>
+    <time [attr.datetime]="askedAt()">{{ askedAtText() }}</time>
+  </header>
+
+  <h2 class="receipt__question" tabindex="-1" [id]="questionId">{{ entry().question }}</h2>
+
+  @if (state().kind === 'pending') {
+    <p class="receipt__status">
+      <!-- Announced once; the counter beside it changes every second and is not. -->
+      <span role="status">Asking {{ store.modelLabel(entry().modelId) }}.</span>
+      <span class="receipt__elapsed" aria-hidden="true">{{ elapsedSeconds() }} s</span>
+    </p>
+  }
+
+  @if (answer(); as answer) {
+    <p class="receipt__explanation">{{ answer.explanation }}</p>
+
+    <dl class="receipt__ledger receipt__section">
+      <div class="receipt__line">
+        <dt>Model</dt>
+        <dd>
+          {{ answer.model.label }}
+          @if (answer.fell_back) {
+            <span class="receipt__note">
+              {{ store.modelLabel(answer.requested_model) }} couldn't answer, so this model did.
+            </span>
+          }
+        </dd>
+      </div>
+      <div class="receipt__line">
+        <dt>Rows</dt>
+        <dd>{{ rowsText(answer.row_count, answer.truncated) }}</dd>
+      </div>
+      <div class="receipt__line">
+        <dt>Time</dt>
+        <dd>{{ formatDuration(answer.latency_ms) }}</dd>
+      </div>
+      @if (answer.repaired) {
+        <div class="receipt__line">
+          <dt>Corrected</dt>
+          <dd>Once, after the database refused the first query</dd>
+        </div>
+      }
+      @if (answer.assumptions.length > 0) {
+        <div class="receipt__line">
+          <dt>Assumed</dt>
+          <dd>
+            <ol class="receipt__assumptions">
+              @for (assumption of answer.assumptions; track $index) {
+                <li>{{ assumption }}</li>
+              }
+            </ol>
+          </dd>
+        </div>
+      }
+    </dl>
+
+    <div class="receipt__section">
+      <dp-receipt-sql [sql]="answer.sql" />
+    </div>
+  }
+</article>

@@ -36,6 +36,7 @@ const compactMoney = new Intl.NumberFormat(LOCALE, {
   notation: 'compact',
   maximumFractionDigits: 1,
 });
+const seconds = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 });
 const relative = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' });
 const regions = new Intl.DisplayNames([LOCALE], { type: 'region' });
 
@@ -93,6 +94,12 @@ export function formatDayRange(start: string, end: string): string {
 /** `69500` becomes `"69,500"`. */
 export function formatCount(value: number): string {
   return withMinus(count.format(value));
+}
+
+/** How long something took: `"214 ms"` below a second, `"2.4 s"` from one on. */
+export function formatDuration(milliseconds: number): string {
+  const rounded = Math.round(milliseconds);
+  return rounded < 1000 ? `${String(rounded)} ms` : `${seconds.format(rounded / 1000)} s`;
 }
 
 /** An amount for a chart axis, where the exact cents would be noise: `"$7.5M"`. */

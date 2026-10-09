@@ -7,6 +7,7 @@ import {
   formatChange,
   formatCompactMoney,
   formatCount,
+  formatDuration,
   formatDayRange,
   formatMoney,
   formatMonth,
@@ -65,6 +66,14 @@ describe('formatting', () => {
     it('groups counts and writes a true minus sign', () => {
       expect(formatCount(69_500)).toBe('69,500');
       expect(formatCount(-3)).toBe('−3');
+    });
+
+    it('formats a duration in milliseconds below a second and in seconds above', () => {
+      expect(formatDuration(214)).toBe('214 ms');
+      expect(formatDuration(999.6)).toBe('1 s');
+      expect(formatDuration(1000)).toBe('1 s');
+      expect(formatDuration(2449)).toBe('2.4 s');
+      expect(formatDuration(12_000)).toBe('12 s');
     });
 
     it.each([

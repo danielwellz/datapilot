@@ -85,9 +85,9 @@ describe('AskStore', () => {
           details: [
             {
               audit_id: auditId,
-              requested_model: 'demo',
-              model: 'demo',
-              provider: 'demo',
+              requested_model: 'fake',
+              model: 'fake',
+              provider: 'fake',
               sql: null,
             },
           ],
@@ -103,9 +103,9 @@ describe('AskStore', () => {
       loadAll();
 
       expect(store.models().map((model) => model.id)).toEqual([
-        'demo',
+        'fake',
         'groq-gpt-oss-120b',
-        'gemini-flash-lite',
+        'gemini-3.5-flash-lite',
       ]);
       expect(store.examples()).toEqual([QUESTION]);
       expect(store.history()).toHaveLength(1);
@@ -157,7 +157,7 @@ describe('AskStore', () => {
     it("defaults to the server's default model", () => {
       loadAll();
 
-      expect(store.selectedModelId()).toBe('demo');
+      expect(store.selectedModelId()).toBe('fake');
     });
 
     it('is the model the user picked', () => {
@@ -173,7 +173,7 @@ describe('AskStore', () => {
 
       store.selectModel('retired-model');
 
-      expect(store.selectedModelId()).toBe('demo');
+      expect(store.selectedModelId()).toBe('fake');
     });
 
     it('falls back to the first model when the default is not offered', () => {
@@ -182,7 +182,7 @@ describe('AskStore', () => {
       http.expectOne(`${AI_URL}/examples`).flush({ items: [] });
       expectHistory().flush(historyPageOut());
 
-      expect(store.selectedModelId()).toBe('demo');
+      expect(store.selectedModelId()).toBe('fake');
     });
 
     it('is null before the models are known', () => {
@@ -191,11 +191,14 @@ describe('AskStore', () => {
 
     it('is sent with the question', () => {
       loadAll();
-      store.selectModel('gemini-flash-lite');
+      store.selectModel('gemini-3.5-flash-lite');
 
       store.ask(QUESTION);
 
-      expect(expectAsk().request.body).toEqual({ question: QUESTION, model: 'gemini-flash-lite' });
+      expect(expectAsk().request.body).toEqual({
+        question: QUESTION,
+        model: 'gemini-3.5-flash-lite',
+      });
     });
 
     it("leaves the model out, for the server's default, when the models failed to load", () => {
@@ -218,13 +221,13 @@ describe('AskStore', () => {
 
       store.ask(QUESTION, 'retired-model');
 
-      expect(expectAsk().request.body).toEqual({ question: QUESTION, model: 'demo' });
+      expect(expectAsk().request.body).toEqual({ question: QUESTION, model: 'fake' });
     });
 
     it('names models by label, and keeps the id of one no longer offered', () => {
       loadAll();
 
-      expect(store.modelLabel('groq-gpt-oss-120b')).toBe('GPT-OSS 120B');
+      expect(store.modelLabel('groq-gpt-oss-120b')).toBe('GPT-OSS 120B (Groq)');
       expect(store.modelLabel('retired-model')).toBe('retired-model');
       expect(store.modelLabel(null)).toBe('the default model');
     });
@@ -232,9 +235,9 @@ describe('AskStore', () => {
     it('lists the other models for a receipt to suggest', () => {
       loadAll();
 
-      expect(store.otherModels('demo').map((model) => model.id)).toEqual([
+      expect(store.otherModels('fake').map((model) => model.id)).toEqual([
         'groq-gpt-oss-120b',
-        'gemini-flash-lite',
+        'gemini-3.5-flash-lite',
       ]);
     });
   });
@@ -251,7 +254,7 @@ describe('AskStore', () => {
       expect(store.canAsk()).toBe(false);
       expect(store.entries()[0]).toMatchObject({
         question: QUESTION,
-        modelId: 'demo',
+        modelId: 'fake',
         state: { kind: 'pending' },
       });
       expectAsk().flush(askOut());
@@ -340,7 +343,7 @@ describe('AskStore', () => {
       failWith(expectAsk(), 422, 'model_not_available');
 
       http.expectOne(`${AI_URL}/models`).flush(modelsOut());
-      expect(store.selectedModelId()).toBe('demo');
+      expect(store.selectedModelId()).toBe('fake');
     });
   });
 
@@ -516,7 +519,7 @@ describe('AskStore', () => {
       expect(store.entries()[0]).toEqual({
         key,
         question: item.question,
-        modelId: 'demo',
+        modelId: 'fake',
         startedAt: Date.parse(item.created_at),
         state: { kind: 'recalled', item },
       });
@@ -554,7 +557,7 @@ describe('AskStore', () => {
     const base = { key: 1, question: QUESTION, modelId: null, startedAt: 0 };
     const receipt = {
       audit_id: 7,
-      requested_model: 'demo',
+      requested_model: 'fake',
       model: null,
       provider: null,
       sql: null,

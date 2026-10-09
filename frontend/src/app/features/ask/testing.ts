@@ -3,9 +3,9 @@ import { AskOut, HistoryItemOut, HistoryPageOut, ModelOut, ModelsOut } from '../
 /** Builders for Ask your data test data, shared by the ask specs. */
 export function modelOut(overrides: Partial<ModelOut> = {}): ModelOut {
   return {
-    id: 'demo',
-    label: 'Demo model',
-    provider: 'demo',
+    id: 'fake',
+    label: 'Demo model (example questions only)',
+    provider: 'fake',
     provider_label: 'Demo',
     default: false,
     ...overrides,
@@ -18,18 +18,18 @@ export function modelsOut(): ModelsOut {
       modelOut({ default: true }),
       modelOut({
         id: 'groq-gpt-oss-120b',
-        label: 'GPT-OSS 120B',
+        label: 'GPT-OSS 120B (Groq)',
         provider: 'groq',
         provider_label: 'Groq',
       }),
       modelOut({
-        id: 'gemini-flash-lite',
+        id: 'gemini-3.5-flash-lite',
         label: 'Gemini 3.5 Flash-Lite',
         provider: 'gemini',
         provider_label: 'Google Gemini',
       }),
     ],
-    default_model: 'demo',
+    default_model: 'fake',
   };
 }
 
@@ -37,8 +37,13 @@ export function askOut(overrides: Partial<AskOut> = {}): AskOut {
   return {
     id: 124,
     question: 'What was the monthly revenue over the last 12 months?',
-    requested_model: 'demo',
-    model: { id: 'demo', label: 'Demo model', provider: 'demo', provider_label: 'Demo' },
+    requested_model: 'fake',
+    model: {
+      id: 'fake',
+      label: 'Demo model (example questions only)',
+      provider: 'fake',
+      provider_label: 'Demo',
+    },
     fell_back: false,
     sql: 'SELECT\n  month,\n  revenue\nFROM v_orders\nLIMIT 1001',
     explanation: 'Revenue from paid orders in each of the last 12 complete months.',
@@ -68,9 +73,9 @@ export function historyItemOut(overrides: Partial<HistoryItemOut> = {}): History
     question: 'How many orders came from each channel this year?',
     status: 'ok',
     error_code: null,
-    requested_model: 'demo',
-    model: 'demo',
-    provider: 'demo',
+    requested_model: 'fake',
+    model: 'fake',
+    provider: 'fake',
     sql: 'SELECT channel, count(*) AS orders FROM v_orders GROUP BY channel',
     explanation: 'The number of orders placed through each channel since 1 January.',
     chart: 'bar',

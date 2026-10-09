@@ -40,13 +40,13 @@ describe('failureReceipt', () => {
   it('reads missing optional fields as null', () => {
     const receipt = failureReceipt(
       askError('llm_unavailable', 'No model.', [
-        { audit_id: 3, requested_model: 'demo', model: null, provider: null, sql: null },
+        { audit_id: 3, requested_model: 'fake', model: null, provider: null, sql: null },
       ]),
     );
 
     expect(receipt).toEqual({
       auditId: 3,
-      requestedModel: 'demo',
+      requestedModel: 'fake',
       model: null,
       sql: null,
       reason: null,
