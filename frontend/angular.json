@@ -82,7 +82,8 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "coverageReporters": ["text-summary", "html"]
+            "coverageReporters": ["text-summary", "html"],
+            "setupFiles": ["src/test-setup.ts"]
           }
         },
         "lint": {

@@ -16,7 +16,7 @@ Three consequences follow from that brief:
 
 1. **Numbers first.** Figures are tabular, right-aligned in tables, use a true minus sign (U+2212), and show their units in a quieter color.
 2. **Structure comes from rules and space, not boxes and shadows.** Content sits on flat sheets separated by 1 px rules. Shadows exist only for things that float above the page.
-3. **Color carries meaning.** Cobalt means "you can act here". Green and red mean "this went up or down" and appear only on changes, always with a sign. Everything else is neutral.
+3. **Color carries meaning.** Cobalt means "you can act here". Green and red mean "this went up or down" and appear only on changes, always with a sign. The one other use of red is an error, which always comes with a written message. Everything else is neutral.
 4. **Dense, not cramped.** A 14 px body size, 32 px table rows and a 4 px grid fit a lot on screen without crowding it.
 5. **Say exactly what happened.** Sentence case everywhere. Buttons name their action ("Log in", not "Continue"). Errors say what went wrong and what to do next.
 6. **One memorable element.** The query receipt is the product's signature. It is the only place with ornamental detail.
@@ -43,6 +43,7 @@ Derived values, defined next to the base colors in the token file:
 | Control border | `#808A98` | `#717B8A` | Input and button borders must reach 3:1 against the sheet (WCAG 1.4.11). The rule color is too light for that. 3.5:1 and 3.6:1. |
 | Cobalt tint | `#E8EBFA` | `#262E45` | Hover and selected backgrounds. Cobalt text on it stays at 6.9:1 and 5.7:1. |
 | Text on cobalt | `#FFFFFF` | `#171C24` | Labels on primary buttons. 8.2:1 and 7.2:1. |
+| Error | `#B42F28` | `#FF7F73` | Invalid fields and failed requests. It shares the down color's value but has its own token, so the two can diverge, and it always comes with a written message. |
 
 Up and down colors are never the only signal. A change is always written with its sign ("+4.2%", "−1.8%"), so it reads correctly in grayscale and for colorblind readers.
 
