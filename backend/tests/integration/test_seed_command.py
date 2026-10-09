@@ -21,7 +21,9 @@ from app.services.seeding import (
     SeedReport,
     SeedService,
 )
-from tests.factories import create_user
+from tests.conftest import AppFactory
+from tests.factories import create_customer, create_order, create_product, create_user
+from tests.settings import PRODUCTION_SECRETS
 
 END_DATE = date(2026, 10, 1)
 TINY = SeedScale("tiny", customers=300, products=40, orders=3_000)
@@ -150,6 +152,55 @@ def test_seed_command_ends_the_history_today_by_default(
     assert result.exit_code == 0, result.output
     assert "seed 42" in result.stderr
     assert "history 2023-03-01 to 2026-02-28" in result.stdout
+
+
+def test_seed_command_if_empty_leaves_existing_data_alone(
+    app: Flask, tiny_small_scale: SeedScale, session: Session, redis_client: Redis
+) -> None:
+    create_order(create_customer(), [(create_product(), 1)])
+
+    result = app.test_cli_runner().invoke(args=["seed", "--if-empty"])
+
+    assert result.exit_code == 0, result.output
+    assert result.stdout == "Sales data is already loaded; nothing to do.\n"
+    assert session.scalar(select(func.count()).select_from(Order)) == 1
+    assert redis_client.get(DATA_VERSION_KEY) is None
+
+
+def test_seed_command_if_empty_loads_an_empty_database(
+    app: Flask, tiny_small_scale: SeedScale, session: Session
+) -> None:
+    result = app.test_cli_runner().invoke(args=["seed", "--if-empty"])
+
+    assert result.exit_code == 0, result.output
+    assert session.scalar(select(func.count()).select_from(Order)) == 3_000
+
+
+def test_seed_command_refuses_to_replace_production_data_without_yes(
+    make_app: AppFactory, tiny_small_scale: SeedScale, session: Session
+) -> None:
+    create_order(create_customer(), [(create_product(), 1)])
+    runner = make_app(app_env="production", **PRODUCTION_SECRETS).test_cli_runner()
+
+    refused = runner.invoke(args=["seed"])
+    assert refused.exit_code == 1
+    assert "Pass --yes to replace it." in refused.stderr
+    assert session.scalar(select(func.count()).select_from(Order)) == 1
+
+    confirmed = runner.invoke(args=["seed", "--yes"])
+    assert confirmed.exit_code == 0, confirmed.output
+    assert session.scalar(select(func.count()).select_from(Order)) == 3_000
+
+
+def test_seed_command_loads_an_empty_production_database_without_yes(
+    make_app: AppFactory, tiny_small_scale: SeedScale, session: Session
+) -> None:
+    runner = make_app(app_env="production", **PRODUCTION_SECRETS).test_cli_runner()
+
+    result = runner.invoke(args=["seed"])
+
+    assert result.exit_code == 0, result.output
+    assert session.scalar(select(func.count()).select_from(Order)) == 3_000
 
 
 @pytest.mark.parametrize(
