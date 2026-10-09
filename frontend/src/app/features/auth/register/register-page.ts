@@ -7,6 +7,7 @@ import { finalize } from 'rxjs';
 import { ApiError, parseApiError } from '../../../core/api/api-error';
 import { AuthService } from '../../../core/auth/auth.service';
 import { safeReturnUrl } from '../../../core/auth/guards';
+import { FormAlert } from '../../../shared/forms/form-alert';
 import {
   SERVER_ERROR,
   ValidationMessages,
@@ -42,7 +43,7 @@ const EMAIL_TAKEN = 'emailTaken';
 
 @Component({
   selector: 'dp-register-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, FormAlert],
   templateUrl: './register-page.html',
   styleUrl: '../auth-page.scss',
 })

@@ -7,6 +7,7 @@ import { finalize } from 'rxjs';
 import { ApiError, parseApiError } from '../../../core/api/api-error';
 import { AuthService } from '../../../core/auth/auth.service';
 import { safeReturnUrl } from '../../../core/auth/guards';
+import { FormAlert } from '../../../shared/forms/form-alert';
 import {
   ValidationMessages,
   applyServerErrors,
@@ -28,7 +29,7 @@ const MESSAGES: Record<'email' | 'password', ValidationMessages> = {
 
 @Component({
   selector: 'dp-login-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, FormAlert],
   templateUrl: './login-page.html',
   styleUrl: '../auth-page.scss',
 })

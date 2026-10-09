@@ -10,12 +10,7 @@
 
   <form class="auth__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
     @if (formError(); as error) {
-      <div class="form-alert" role="alert">
-        <p>{{ error.message }}</p>
-        @if (error.status >= 500 && error.requestId) {
-          <p class="auth__request-id">Request ID {{ error.requestId }}</p>
-        }
-      </div>
+      <dp-form-alert [error]="error" />
     }
 
     <div class="field">
