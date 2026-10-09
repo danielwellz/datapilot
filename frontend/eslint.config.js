@@ -31,6 +31,8 @@ module.exports = defineConfig([
       ],
       // Components such as the root or a static page are decorated empty classes.
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
+      // Angular's Validators are static functions that never use `this`.
+      '@typescript-eslint/unbound-method': ['error', { ignoreStatic: true }],
       '@typescript-eslint/explicit-member-accessibility': ['error', { accessibility: 'no-public' }],
     },
   },

@@ -1,0 +1,52 @@
+// Shared by the login and register pages: one plain column on the paper.
+
+:host {
+  display: block;
+  padding: var(--space-7) var(--gutter);
+}
+
+.auth {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.auth__wordmark {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-lead);
+}
+
+.auth__intro {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.auth__lead {
+  color: var(--color-graphite);
+}
+
+.auth__form {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-sheet);
+  background: var(--color-sheet);
+}
+
+.auth__submit {
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.auth__request-id {
+  margin-top: var(--space-1);
+  color: var(--color-graphite);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+}
+
+.auth__switch {
+  color: var(--color-graphite);
+}

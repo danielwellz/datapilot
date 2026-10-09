@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { DOCUMENT, Injectable, computed, inject, signal } from '@angular/core';
 import {
   Observable,
@@ -15,6 +15,7 @@ import {
 
 import { readCookie } from '../api/cookies';
 import { LoginIn, SessionOut, UserCreate, UserOut } from '../api/models';
+import { SKIP_ERROR_TOAST } from '../http/error.interceptor';
 
 export const AUTH_URLS = {
   login: '/api/auth/login',
@@ -53,19 +54,22 @@ export class AuthService {
   readonly accessToken = computed(() => this.session()?.accessToken ?? null);
   readonly isAuthenticated = computed(() => this.session() !== null);
 
+  /** Logs in. Failures are left to the form, which reports every one of them inline. */
   login(credentials: LoginIn): Observable<UserOut> {
-    return this.http.post<SessionOut>(AUTH_URLS.login, credentials).pipe(
-      tap((session) => {
-        this.start(session);
-      }),
-      map((session) => session.user),
-    );
+    return this.http
+      .post<SessionOut>(AUTH_URLS.login, credentials, { context: formContext() })
+      .pipe(
+        tap((session) => {
+          this.start(session);
+        }),
+        map((session) => session.user),
+      );
   }
 
   /** Creates the account, then logs in with the same credentials. */
   register(account: UserCreate): Observable<UserOut> {
     return this.http
-      .post<UserOut>(AUTH_URLS.register, account)
+      .post<UserOut>(AUTH_URLS.register, account, { context: formContext() })
       .pipe(switchMap(() => this.login({ email: account.email, password: account.password })));
   }
 
@@ -148,6 +152,10 @@ export class AuthService {
     const token = readCookie(this.document, CSRF_COOKIE);
     return token === null ? new HttpHeaders() : new HttpHeaders({ [CSRF_HEADER]: token });
   }
+}
+
+function formContext(): HttpContext {
+  return new HttpContext().set(SKIP_ERROR_TOAST, true);
 }
 
 /** True when the server refused the refresh token itself, not when it was unreachable. */

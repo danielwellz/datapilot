@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
+import { SKIP_ERROR_TOAST } from '../http/error.interceptor';
 import { AUTH_URLS, AuthService, CSRF_COOKIE, CSRF_HEADER } from './auth.service';
 import { clearCookie, sessionOut, setCookie, userOut } from './testing';
 
@@ -54,6 +55,14 @@ describe('AuthService', () => {
       expect(service.user()?.full_name).toBe('Ada Analyst');
     });
 
+    it('leaves failures to the form rather than a toast', () => {
+      service.login({ email: 'analyst@example.com', password: 'correct-horse' }).subscribe();
+
+      const request = http.expectOne(AUTH_URLS.login);
+      expect(request.request.context.get(SKIP_ERROR_TOAST)).toBe(true);
+      request.flush(sessionOut());
+    });
+
     it('leaves the user logged out when the credentials are wrong', () => {
       let failed = false;
       service
@@ -78,6 +87,7 @@ describe('AuthService', () => {
 
       const created = http.expectOne(AUTH_URLS.register);
       expect(created.request.body).toEqual(account);
+      expect(created.request.context.get(SKIP_ERROR_TOAST)).toBe(true);
       created.flush(userOut({ email: account.email }), { status: 201, statusText: 'Created' });
 
       const login = http.expectOne(AUTH_URLS.login);
