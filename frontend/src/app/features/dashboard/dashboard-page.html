@@ -11,4 +11,17 @@
     [days]="store.params().days"
     (daysChange)="select({ days: $event })"
   />
+
+  <!--
+    The data of every panel is already loading (the store started it); what
+    waits for the viewport is the chart code, Chart.js included, and the
+    drawing. Placeholders are the height of the panel that replaces them.
+  -->
+  @defer (on viewport; prefetch on idle) {
+    <dp-revenue-chart [panel]="store.revenue" />
+  } @placeholder {
+    <section class="panel deferred deferred--revenue" aria-label="Monthly revenue">
+      <p class="panel__placeholder">Loading monthly revenue…</p>
+    </section>
+  }
 </section>

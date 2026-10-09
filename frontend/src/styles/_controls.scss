@@ -27,6 +27,12 @@
   }
 }
 
+.button[aria-pressed='true'] {
+  border-color: var(--color-signal);
+  background: var(--color-signal-tint);
+  color: var(--color-signal);
+}
+
 .button--primary {
   border-color: var(--color-signal);
   background: var(--color-signal);

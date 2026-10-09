@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { DashboardParams, paramsFromQuery, paramsToQuery } from './dashboard-params';
 import { DashboardStore } from './dashboard.store';
 import { KpiRow } from './kpi-row';
+import { RevenueChart } from './revenue-chart';
 
 /**
  * The analytics dashboard. The URL's query string holds the selectors: this
@@ -13,9 +14,10 @@ import { KpiRow } from './kpi-row';
  */
 @Component({
   selector: 'dp-dashboard-page',
-  imports: [KpiRow],
+  imports: [KpiRow, RevenueChart],
   providers: [DashboardStore],
   templateUrl: './dashboard-page.html',
+  styleUrl: './dashboard-page.scss',
 })
 export class DashboardPage {
   protected readonly store = inject(DashboardStore);

@@ -1,0 +1,9 @@
+// Placeholders for the deferred panels, as tall as the panels they stand in
+// for, so the page does not jump when a panel renders.
+.deferred {
+  align-content: center;
+}
+
+.deferred--revenue {
+  min-height: 422px;
+}

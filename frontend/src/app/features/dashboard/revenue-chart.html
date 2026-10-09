@@ -1,0 +1,86 @@
+<section
+  class="panel"
+  aria-labelledby="revenue-title"
+  [attr.aria-busy]="panel().status() === 'loading'"
+>
+  <header class="panel__header">
+    <div>
+      <h2 id="revenue-title" class="panel__title">Monthly revenue</h2>
+      <p class="panel__period">{{ period() }}</p>
+    </div>
+    @if (view() === 'loaded') {
+      <button
+        class="button"
+        type="button"
+        [attr.aria-pressed]="showTable()"
+        (click)="showTable.set(!showTable())"
+      >
+        Show as table
+      </button>
+    }
+  </header>
+
+  @switch (view()) {
+    @case ('failed') {
+      <dp-panel-error
+        subject="Monthly revenue"
+        [error]="panel().error()"
+        (retry)="panel().retry()"
+      />
+    }
+    @case ('loading') {
+      <p class="panel__placeholder revenue__placeholder">Loading monthly revenue…</p>
+    }
+    @case ('empty') {
+      <p class="state">There were no paid orders in these months.</p>
+    }
+    @default {
+      <div class="panel__body" [class.panel__body--stale]="panel().stale()">
+        @if (!showTable()) {
+          <dp-chart [spec]="spec()" [height]="280" />
+        }
+        <div
+          class="table-scroll"
+          [class.visually-hidden]="!showTable()"
+          role="region"
+          aria-labelledby="revenue-caption"
+          [attr.tabindex]="showTable() ? 0 : null"
+        >
+          <table class="data-table">
+            <caption id="revenue-caption" class="visually-hidden">
+              Monthly revenue, oldest month first
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Month</th>
+                <th scope="col" class="data-table__number">Revenue</th>
+                <th scope="col" class="data-table__number">Paid orders</th>
+                <th scope="col" class="data-table__number">3-month average</th>
+                <th scope="col" class="data-table__number">Month over month</th>
+                <th scope="col" class="data-table__number">Year over year</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of items(); track item.month) {
+                <tr>
+                  <th scope="row">{{ formatMonth(item.month) }}</th>
+                  <td class="data-table__number"><dp-money [amount]="item.revenue" /></td>
+                  <td class="data-table__number">{{ formatCount(item.orders) }}</td>
+                  <td class="data-table__number">
+                    <dp-money [amount]="item.revenue_moving_average_3m" />
+                  </td>
+                  <td class="data-table__number">
+                    <dp-change [change]="item.revenue_change_mom" missing="None" />
+                  </td>
+                  <td class="data-table__number">
+                    <dp-change [change]="item.revenue_change_yoy" missing="None" />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+</section>

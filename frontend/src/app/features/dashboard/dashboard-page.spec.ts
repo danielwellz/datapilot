@@ -1,9 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { provideFakeCharts } from '../../shared/chart/testing';
 import { ANALYTICS_URL } from './analytics-api';
 import { DashboardPage } from './dashboard-page';
 import {
@@ -24,8 +25,10 @@ describe('DashboardPage', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideFakeCharts(),
         provideRouter([{ path: 'dashboard', component: DashboardPage }]),
       ],
+      deferBlockBehavior: DeferBlockBehavior.Manual,
     });
     http = TestBed.inject(HttpTestingController);
   });
@@ -108,5 +111,22 @@ describe('DashboardPage', () => {
 
     expect(TestBed.inject(Router).url).toBe('/dashboard');
     expect(await answerAll()).toEqual(['summary?days=30']);
+  });
+
+  it('loads the charts’ data at once but renders them only when their block does', async () => {
+    await open('/dashboard');
+    expect(await answerAll()).toContain('revenue-monthly?months=24');
+
+    expect(page.querySelector('dp-revenue-chart')).toBeNull();
+    expect(page.querySelector('.deferred--revenue')?.textContent.trim()).toBe(
+      'Loading monthly revenue…',
+    );
+
+    for (const block of await harness.fixture.getDeferBlocks()) {
+      await block.render(DeferBlockState.Complete);
+    }
+
+    expect(page.querySelector('.deferred--revenue')).toBeNull();
+    expect(page.querySelector('dp-revenue-chart h2')?.textContent).toBe('Monthly revenue');
   });
 });

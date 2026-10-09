@@ -33,6 +33,9 @@ export const TOP_CUSTOMERS_PER_COUNTRY = 1;
 
 export type PanelStatus = 'loading' | 'loaded' | 'failed';
 
+/** What a panel component shows: its content, or why there is none. */
+export type PanelView = 'loading' | 'loaded' | 'empty' | 'failed';
+
 /** One dashboard panel's data and request state. */
 export interface Panel<T> {
   /** The latest answer; while new parameters load, the previous one. */
