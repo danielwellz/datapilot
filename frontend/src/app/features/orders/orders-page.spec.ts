@@ -11,12 +11,12 @@ import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import { META_URL } from '../../core/api/meta.service';
-import { metaOut } from '../../core/api/testing';
+import { failWith, metaOut } from '../../core/api/testing';
 import { textOf } from '../../shared/forms/testing';
 import { ORDERS_URL } from './orders-api';
 import { OrdersPage } from './orders-page';
 import { OrdersStore } from './orders.store';
-import { failWith, orderPage, orderSummary } from './testing';
+import { orderPage, orderSummary } from './testing';
 
 @Component({ template: '' })
 class Blank {}

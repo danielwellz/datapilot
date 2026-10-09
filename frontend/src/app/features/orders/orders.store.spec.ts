@@ -6,10 +6,11 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
+import { failWith } from '../../core/api/testing';
 import { NO_FILTERS, OrderFilters } from './order-filters';
 import { ORDERS_URL } from './orders-api';
 import { OrdersStore, PAGE_SIZE } from './orders.store';
-import { failWith, orderPage } from './testing';
+import { orderPage } from './testing';
 
 const PAID: OrderFilters = { ...NO_FILTERS, statuses: ['paid'] };
 const GERMANY: OrderFilters = { ...NO_FILTERS, country: 'DE' };
