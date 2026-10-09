@@ -32,6 +32,10 @@
 }
 
 // A table wider than the screen scrolls inside its sheet, never the page.
+// Paint containment also makes this box the containing block of absolutely
+// positioned descendants, such as visually hidden header text, which would
+// otherwise sit outside it and widen the page.
 .table-scroll {
   overflow-x: auto;
+  contain: paint;
 }
