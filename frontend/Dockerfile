@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Build ------------------------------------------------------------------
-FROM node:24.21.0-alpine AS build
+FROM node:26.10.0-alpine AS build
 ENV NG_CLI_ANALYTICS=false
 WORKDIR /build
 COPY package.json package-lock.json ./
