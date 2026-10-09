@@ -1,0 +1,10 @@
+# Only the application, its migrations and the Gunicorn settings go into the
+# image; everything else stays out of the build context.
+*
+!app/
+!migrations/
+!gunicorn.conf.py
+!pyproject.toml
+!uv.lock
+!.python-version
+**/__pycache__/

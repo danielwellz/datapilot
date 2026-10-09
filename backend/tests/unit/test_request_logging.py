@@ -1,4 +1,6 @@
+import json
 import logging
+import logging.config
 import uuid
 from collections.abc import Iterator
 
@@ -8,7 +10,12 @@ from flask.testing import FlaskClient
 
 from app import create_app
 from app.config import Settings
-from app.logging import REQUEST_ID_HEADER, STDOUT_HANDLER_NAME, configure_logging
+from app.logging import (
+    REQUEST_ID_HEADER,
+    STDOUT_HANDLER_NAME,
+    configure_logging,
+    gunicorn_log_config,
+)
 from tests.logs import LogCapture
 
 app_logger = logging.getLogger("app.tests")
@@ -124,3 +131,43 @@ def test_configure_logging_replaces_its_own_handler_and_keeps_others(
     assert len(ours) == 1
     assert root.level == logging.WARNING
     assert [line["message"] for line in captured_logs.records("app.tests")] == ["still captured"]
+
+
+@pytest.mark.usefixtures("restore_root_logger")
+def test_configure_logging_keeps_http_client_request_lines_out_of_debug_logs() -> None:
+    configure_logging("DEBUG")
+
+    assert logging.getLogger("httpx2").getEffectiveLevel() == logging.WARNING
+    assert logging.getLogger("httpcore2.connection").getEffectiveLevel() == logging.WARNING
+
+
+@pytest.fixture
+def restore_gunicorn_loggers() -> Iterator[None]:
+    loggers = [logging.getLogger(name) for name in ("gunicorn.error", "gunicorn.access")]
+    saved = [(log, list(log.handlers), log.level, log.propagate) for log in loggers]
+    yield
+    for log, handlers, level, propagate in saved:
+        log.handlers, log.propagate = handlers, propagate
+        log.setLevel(level)
+
+
+@pytest.mark.usefixtures("restore_root_logger", "restore_gunicorn_loggers")
+def test_gunicorn_records_become_json_lines_and_its_access_lines_are_dropped(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # What Gunicorn applies in the master, then what each worker's create_app does.
+    logging.config.dictConfig(gunicorn_log_config("INFO"))
+    configure_logging("INFO")
+
+    logging.getLogger("gunicorn.error").info("Booting worker with pid: 7")
+    logging.getLogger("gunicorn.access").info('"GET /api/health HTTP/1.1" 200')
+
+    lines = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    (line,) = lines
+    assert (line["level"], line["logger"], line["message"]) == (
+        "INFO",
+        "gunicorn.error",
+        "Booting worker with pid: 7",
+    )
+    root = logging.getLogger()
+    assert [h.get_name() for h in root.handlers].count(STDOUT_HANDLER_NAME) == 1
