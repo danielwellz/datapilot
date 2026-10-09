@@ -176,7 +176,7 @@ def test_login_rejects_malformed_input_with_422(client: FlaskClient, payload: An
     assert response.get_json()["error"]["code"] == "validation_failed"
 
 
-@pytest.mark.usefixtures("user")
+@pytest.mark.usefixtures("user", "pinned_rate_limit_clock")
 def test_sixth_attempt_for_one_account_from_one_address_gets_429(client: FlaskClient) -> None:
     for _ in range(5):
         assert login(client, password="wrong password").status_code == 401
@@ -187,11 +187,11 @@ def test_sixth_attempt_for_one_account_from_one_address_gets_429(client: FlaskCl
     error = blocked.get_json()["error"]
     assert error["code"] == "rate_limited"
     assert error["message"] == "Too many login attempts for this account. Try again later."
-    assert 0 < int(blocked.headers["Retry-After"]) <= 60
+    assert blocked.headers["Retry-After"] == "60"
     assert "Set-Cookie" not in blocked.headers
 
 
-@pytest.mark.usefixtures("user")
+@pytest.mark.usefixtures("user", "pinned_rate_limit_clock")
 def test_account_limit_does_not_block_other_accounts_or_addresses(client: FlaskClient) -> None:
     create_user(email="bruno@datapilot.dev")
     for _ in range(5):
@@ -202,7 +202,7 @@ def test_account_limit_does_not_block_other_accounts_or_addresses(client: FlaskC
     assert login(client, ip="198.51.100.2").status_code == 200
 
 
-@pytest.mark.usefixtures("user")
+@pytest.mark.usefixtures("user", "pinned_rate_limit_clock")
 def test_address_limit_stops_spraying_one_password_over_many_emails(client: FlaskClient) -> None:
     for n in range(30):
         assert login(client, email=f"user{n}@datapilot.dev").status_code == 401
@@ -217,7 +217,7 @@ def test_address_limit_stops_spraying_one_password_over_many_emails(client: Flas
     assert other_address.status_code == 200
 
 
-@pytest.mark.usefixtures("user")
+@pytest.mark.usefixtures("user", "pinned_rate_limit_clock")
 def test_refused_attempts_spend_no_hashing_time(
     client: FlaskClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

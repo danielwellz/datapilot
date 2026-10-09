@@ -89,6 +89,7 @@ def test_register_does_not_echo_a_rejected_password(client: FlaskClient) -> None
     assert "tiny-pw" not in response.get_data(as_text=True)
 
 
+@pytest.mark.usefixtures("pinned_rate_limit_clock")
 def test_register_is_limited_to_10_per_hour_per_client_address(client: FlaskClient) -> None:
     for n in range(10):
         response = client.post(URL, json=PAYLOAD | {"email": f"user{n}@datapilot.dev"})
@@ -103,7 +104,7 @@ def test_register_is_limited_to_10_per_hour_per_client_address(client: FlaskClie
 
     assert blocked.status_code == 429
     assert blocked.get_json()["error"]["code"] == "rate_limited"
-    assert 0 < int(blocked.headers["Retry-After"]) <= 3600
+    assert blocked.headers["Retry-After"] == "3600"
     assert other_address.status_code == 201
 
 

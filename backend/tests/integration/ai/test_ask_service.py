@@ -235,7 +235,7 @@ def test_the_per_user_rate_limit_refuses_further_questions_without_auditing_them
     with pytest.raises(RateLimited) as caught:
         service.ask(user.id, question, "fake")
 
-    assert 1 <= caught.value.retry_after_seconds <= 60
+    assert caught.value.retry_after_seconds == 60
     assert caught.value.message.startswith("You can ask 2 questions a minute.")
     assert len(db_session.execute(select(AiQuery)).all()) == 2
     # The limit is per user.

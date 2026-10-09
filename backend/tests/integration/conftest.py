@@ -9,8 +9,11 @@ or roll back savepoints, and nothing ever reaches the database for good.
 Redis: tests use their own database index, flushed before and after each test.
 """
 
+import importlib
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager
+from datetime import UTC, datetime
+from functools import partial
 from typing import Any
 
 import flask_migrate
@@ -20,8 +23,10 @@ from redis import Redis
 from sqlalchemy import Connection, event, text
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
+from app.api import rate_limits
 from app.config import Settings
 from app.extensions import db, get_redis
+from app.services.rate_limiter import FixedWindowRateLimiter
 from tests.factories import create_user
 from tests.tokens import access_token_for, bearer
 
@@ -30,6 +35,10 @@ QueryCounter = Callable[[], AbstractContextManager[list[str]]]
 # The harness turns each commit into savepoint statements, which production
 # never runs; they are not queries the code under test chose to make.
 _HARNESS_STATEMENTS = ("SAVEPOINT", "RELEASE SAVEPOINT", "ROLLBACK TO SAVEPOINT")
+
+# Midnight UTC starts both a minute and an hour, so every limiter window in a
+# test opens exactly here and Retry-After is always one whole window.
+PINNED_NOW = datetime(2026, 1, 1, tzinfo=UTC).timestamp()
 
 
 @pytest.fixture(scope="session")
@@ -80,6 +89,21 @@ def redis_client(app: Flask, settings: Settings) -> Iterator[Redis]:
     client.flushdb()
     yield client
     client.flushdb()
+
+
+@pytest.fixture
+def pinned_rate_limit_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Freeze the clock of the limiters the endpoints build at ``PINNED_NOW``.
+
+    Limiter windows follow the wall clock, so a test whose hits straddle a
+    window boundary sees its counter reset and never gets the expected 429.
+    The endpoints build their limiters themselves, so the class they call is
+    swapped for one with the clock already bound.
+    """
+    pinned = partial(FixedWindowRateLimiter, clock=lambda: PINNED_NOW)
+    monkeypatch.setattr(rate_limits, "FixedWindowRateLimiter", pinned)
+    # By module object: the name app.api.ai is the blueprint that package exports.
+    monkeypatch.setattr(importlib.import_module("app.api.ai"), "FixedWindowRateLimiter", pinned)
 
 
 @pytest.fixture

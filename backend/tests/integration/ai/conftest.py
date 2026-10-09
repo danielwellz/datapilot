@@ -27,6 +27,7 @@ from app.ai.registry import ModelRegistry, RegisteredModel, RegistryConfig
 from app.ai.sql_guard import GuardedSql
 from app.services.ask import AskService, QueryRunner
 from app.services.rate_limiter import FixedWindowRateLimiter
+from tests.integration.conftest import PINNED_NOW
 
 RunAsReadonly = Callable[[str], list[tuple[Any, ...]]]
 TEST_USAGE = TokenUsage(input_tokens=100, output_tokens=20)
@@ -175,7 +176,11 @@ def make_service(
             client_for=client_for,
             runner=runner or session_runner,
             rate_limiter=FixedWindowRateLimiter(
-                redis_client, name="ai-ask", limit=rate_limit, window_seconds=60
+                redis_client,
+                name="ai-ask",
+                limit=rate_limit,
+                window_seconds=60,
+                clock=lambda: PINNED_NOW,
             ),
             describe_schema=lambda: "v_orders: One row per order.",
             max_rows=max_rows,
