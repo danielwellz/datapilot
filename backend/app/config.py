@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     jwt_refresh_ttl_days: PositiveInt = 7
 
     log_level: LogLevel = "INFO"
+    # Per statement, for requests only: no API query comes close (the slowest
+    # measured p95 is under 0.5 s at full scale), so a statement this slow is
+    # an unmeasured filter combination or a request the client gave up on.
+    api_statement_timeout_ms: PositiveInt = 3000
 
     # Model registry ids; validated against the registry when the app starts.
     llm_default_model: str | None = None
