@@ -5,7 +5,7 @@
 # --- Dependencies -----------------------------------------------------------
 # uv installs exactly the locked runtime dependencies into a virtualenv that
 # the final image copies; uv itself and the build caches stay behind.
-FROM ghcr.io/astral-sh/uv:0.12.15 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.0 AS uv
 
 FROM public.ecr.aws/docker/library/python:3.12.15-slim-trixie AS dependencies
 COPY --from=uv /uv /usr/local/bin/uv
