@@ -1,0 +1,37 @@
+:host {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  color: var(--color-graphite);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  list-style: none;
+}
+
+.chart__key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chart__swatch {
+  width: 16px;
+  border-top: 2px solid var(--swatch);
+}
+
+.chart__swatch--dashed {
+  border-top-style: dashed;
+}
+
+// Chart.js sizes the canvas from this box, so it needs a definite height.
+.chart__canvas {
+  position: relative;
+  min-width: 0;
+}
