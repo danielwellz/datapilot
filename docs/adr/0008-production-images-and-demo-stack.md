@@ -64,3 +64,7 @@ A Playwright smoke test (`e2e/`) logs in with the demo account, reloads, opens a
 - The images are deployable as they are, given real secrets and a TLS-terminating proxy or load balancer in front of Nginx. HSTS is not set, because the demo is served over plain HTTP on localhost.
 - The read-only database role's password is set by the `migrate` job on every start, so changing it in `.env.demo` only needs a restart. The owner and app passwords are fixed when the volume is created: `make demo-reset` deletes the volumes to start over.
 - `datapilot_app` may write to every table, which is more than the API needs for sales data. Narrower grants per table are possible later.
+
+## Later changes
+
+- **2026-10-09 (Stage 12):** `make demo scale=full` loads the 2,000,000-order dataset into the demo stack. It builds the images, starts PostgreSQL and Redis, and runs the seed in a one-off `migrate` container before the API starts, because the seed's `TRUNCATE` would otherwise block every request for the length of the load. It is skipped when the demo already holds the full dataset, and refused when Docker's disk has less than 6 GB free. The load took about 2 minutes, and the data directory takes 1.9 GB. `make demo` alone keeps whatever data the stack holds; `make demo-reset` returns it to the small dataset on the next start.

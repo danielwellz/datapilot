@@ -105,3 +105,7 @@ Every failure uses the standard error envelope with a stable code: `model_not_av
 - The local role is shared by the development and test databases, so their read-only passwords must match (`.env.example` says so).
 - Free tiers rate limit, so answers can come from a fallback model, and the response says so. `docs/ai-evaluation.md` compares the enabled models on 15 golden questions, and `make eval-ask` reruns it. A model whose free tier cannot sustain a run (Gemini 3.5 Flash allows 20 requests a day) carries a `skip_evaluation` reason in the registry: it stays selectable, and the report says why it was left out.
 - The development app role is a superuser, which the views rely on only for ownership. Running the application as a non-superuser owner is a Stage 11 task.
+
+## Later changes
+
+- **2026-10-09 (Stage 11):** the demo stack's API connects as `datapilot_app`, which owns nothing and may only read and write rows; the owner role runs only migrations and the seed ([ADR 0008](0008-production-images-and-demo-stack.md)). Development and CI keep one superuser role.
