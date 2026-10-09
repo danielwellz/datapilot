@@ -28,11 +28,11 @@ import { formatChange } from './format';
     }
 
     .change--favorable {
-      color: var(--color-up);
+      color: var(--color-favorable);
     }
 
     .change--unfavorable {
-      color: var(--color-down);
+      color: var(--color-unfavorable);
     }
 
     .change--neutral,

@@ -10,8 +10,8 @@
   --color-graphite: #525c6b;
   --color-ink: #121821;
   --color-signal: #2b3fbf;
-  --color-up: #13714b;
-  --color-down: #b42f28;
+  --color-favorable: #13714b;
+  --color-unfavorable: #b42f28;
 
   // Rules are too light for control boundaries, which need 3:1 (WCAG 1.4.11).
   --color-control-border: #808a98;
@@ -46,8 +46,8 @@
   --color-graphite: #9aa4b3;
   --color-ink: #e6eaf0;
   --color-signal: #93a2ff;
-  --color-up: #4fc48d;
-  --color-down: #ff7f73;
+  --color-favorable: #4fc48d;
+  --color-unfavorable: #ff7f73;
 
   --color-control-border: #717b8a;
   --color-signal-tint: #262e45;
