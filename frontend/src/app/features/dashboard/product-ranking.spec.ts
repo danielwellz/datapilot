@@ -74,11 +74,13 @@ describe('ProductRanking', () => {
   async function render(
     panel: FakePanel<ProductRankingOut>,
     category: string | null = null,
+    meta: FakePanel<MetaOut> = fakePanel(metaOut()),
   ): Promise<void> {
     drawn = [];
     TestBed.configureTestingModule({ providers: [provideFakeCharts(drawn)] });
     fixture = TestBed.createComponent(Host);
     fixture.componentInstance.panel = panel;
+    fixture.componentInstance.meta = meta;
     fixture.componentInstance.category.set(category);
     element = fixture.nativeElement as HTMLElement;
     await fixture.whenStable();
@@ -152,6 +154,16 @@ describe('ProductRanking', () => {
       select.dispatchEvent(new Event('change'));
     }
     expect(fixture.componentInstance.chosen).toEqual([null]);
+  });
+
+  it('says when the categories could not be loaded and asks again on request', async () => {
+    const meta = fakePanel<MetaOut>();
+    meta.set({ status: 'failed', error: FAILURE });
+    await render(fakePanel(productRankingOut()), 'Books', meta);
+
+    expect(element.querySelector('select')?.value).toBe('Books');
+    element.querySelector<HTMLButtonElement>('.field__error button')?.click();
+    expect(meta.retries).toBe(1);
   });
 
   it('says when nothing in the category sold', async () => {

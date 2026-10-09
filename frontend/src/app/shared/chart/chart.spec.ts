@@ -135,4 +135,24 @@ describe('ChartView', () => {
     fixture.destroy();
     expect(charts[0]?.destroyed).toBe(true);
   });
+
+  it('redraws once the web font has loaded, so the canvas uses it', async () => {
+    let fontsLoaded: () => void = () => undefined;
+    const ready = new Promise<void>((resolve) => (fontsLoaded = resolve));
+    // jsdom has no font loading API; a browser always does.
+    Object.defineProperty(document, 'fonts', { value: { ready }, configurable: true });
+    try {
+      const late = TestBed.createComponent(Host);
+      await late.whenStable();
+      const chart = charts.at(-1);
+      const before = chart?.updates.length ?? 0;
+
+      fontsLoaded();
+      await ready;
+
+      expect(chart?.updates.length).toBe(before + 1);
+    } finally {
+      Reflect.deleteProperty(document, 'fonts');
+    }
+  });
 });
