@@ -29,7 +29,7 @@ DEMO_FULL_MIN_FREE_GB := 6
 	be-install be-dev be-stop be-test be-lint be-format be-typecheck \
 	db-migrate db-upgrade db-roles seed explain explain-analytics bench eval-ask \
 	fe-install fe-dev fe-test fe-lint fe-format fe-build \
-	e2e-install e2e e2e-typecheck \
+	e2e-install e2e e2e-typecheck screenshots \
 	hooks check demo demo-full-data demo-down demo-reset demo-logs
 
 help: ## List available targets
@@ -144,7 +144,10 @@ e2e-install: ## Install the smoke test's dependencies and its Chromium
 e2e: ## Run the browser smoke test against the running demo stack (make demo)
 	cd $(E2E) && npx playwright test
 
-e2e-typecheck: ## Type-check the smoke test
+screenshots: ## Capture docs/images in both themes from the running demo stack [model="GPT-OSS 120B (Groq)"]
+	cd $(E2E) && SCREENSHOT_MODEL="$(model)" npx playwright test --config screenshots.config.ts
+
+e2e-typecheck: ## Type-check the smoke test and the screenshot script
 	cd $(E2E) && npx tsc --noEmit
 
 # --- Workflow -------------------------------------------------------------
