@@ -1,0 +1,206 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.skip-link {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 200;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-signal);
+  color: var(--color-on-signal);
+  transform: translateY(-200%);
+
+  &:focus {
+    transform: none;
+  }
+}
+
+.header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: 'brand nav actions';
+  align-items: stretch;
+  column-gap: var(--space-6);
+  min-height: 56px;
+  padding: 0 var(--gutter);
+  border-bottom: 1px solid var(--color-rule);
+  background: var(--color-sheet);
+}
+
+.header__brand {
+  grid-area: brand;
+  align-self: center;
+  color: var(--color-ink);
+  font-size: var(--text-lead);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+
+.header__nav {
+  grid-area: nav;
+  display: flex;
+  gap: var(--space-5);
+}
+
+.header__link {
+  display: flex;
+  align-items: center;
+  // The active rule sits on the header's bottom border.
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--color-graphite);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  transition: color var(--duration-state) var(--ease-out);
+
+  &:hover {
+    color: var(--color-ink);
+  }
+
+  // Inside the link: the phone tabs touch the screen edges, which would clip
+  // an outline drawn outside them.
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+.header__link--active {
+  border-bottom-color: var(--color-signal);
+  color: var(--color-ink);
+}
+
+.header__actions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.icon-button {
+  width: var(--control-height);
+  padding: 0;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+}
+
+.account-button {
+  padding: 0 var(--space-2);
+}
+
+.account-button__initials {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-round);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+}
+
+.main {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-6) var(--gutter) var(--space-7);
+
+  &:focus {
+    outline: none;
+  }
+}
+
+// Three destinations fit on a phone, so they become a second row of equal
+// tabs instead of hiding behind a menu button.
+@media (max-width: 599.98px) {
+  .header {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'brand actions'
+      'nav nav';
+    min-height: 0;
+    padding: 0;
+  }
+
+  .header__brand {
+    padding: var(--space-3) var(--gutter);
+  }
+
+  .header__actions {
+    padding-right: calc(var(--gutter) - var(--space-2));
+  }
+
+  .header__nav {
+    gap: 0;
+    border-top: 1px solid var(--color-rule);
+  }
+
+  .header__link {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .account-button__name {
+    display: none;
+  }
+
+  .main {
+    padding-top: var(--space-5);
+  }
+}
+
+// The menu renders in a CDK overlay, outside the host element, but it is
+// declared in this template, so these scoped styles still reach it.
+.menu {
+  display: grid;
+  min-width: 220px;
+  padding: var(--space-1) 0;
+  border-radius: var(--radius-overlay);
+  background: var(--color-sheet);
+  box-shadow: var(--shadow-overlay);
+}
+
+.menu__identity {
+  display: grid;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  margin-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.menu__name {
+  font-weight: var(--weight-medium);
+}
+
+.menu__email {
+  color: var(--color-graphite);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.menu__item {
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    background: var(--color-signal-tint);
+  }
+
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
