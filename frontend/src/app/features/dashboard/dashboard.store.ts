@@ -12,8 +12,10 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { Observable, catchError, throwError } from 'rxjs';
 
 import { ApiError, parseApiError } from '../../core/api/api-error';
+import { MetaService } from '../../core/api/meta.service';
 import {
   CohortsOut,
+  MetaOut,
   ProductRankingOut,
   RevenueMonthlyOut,
   SummaryOut,
@@ -49,9 +51,10 @@ export interface Panel<T> {
 }
 
 /**
- * The dashboard's five panels. Each is a resource that starts loading as
- * soon as the store exists, so all five requests run in parallel, and each
- * fails on its own: one broken query leaves the other panels working.
+ * The dashboard's five panels and the selectors' options. Each is a
+ * resource that starts loading as soon as the store exists, so every
+ * request runs in parallel, and each fails on its own: one broken query
+ * leaves the other panels working.
  *
  * A resource cancels its request in flight when its parameters change, so
  * only the newest selection's answer can arrive. Each resource reads only
@@ -61,6 +64,7 @@ export interface Panel<T> {
 @Injectable()
 export class DashboardStore {
   private readonly api = inject(AnalyticsApi);
+  private readonly metaService = inject(MetaService);
 
   /** Set from the URL by the page. */
   readonly params = signal<DashboardParams>(DEFAULT_PARAMS);
@@ -109,6 +113,11 @@ export class DashboardStore {
     rxResource({
       stream: () => withApiError(this.api.cohorts({ months: COHORT_MONTHS })),
     }),
+  );
+
+  /** The countries and categories the selectors offer; shared with the orders page. */
+  readonly meta = panel<MetaOut>(
+    rxResource({ stream: () => withApiError(this.metaService.load()) }),
   );
 }
 

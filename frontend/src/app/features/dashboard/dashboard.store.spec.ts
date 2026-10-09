@@ -6,7 +6,8 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { failWith } from '../../core/api/testing';
+import { META_URL } from '../../core/api/meta.service';
+import { failWith, metaOut } from '../../core/api/testing';
 import { ANALYTICS_URL } from './analytics-api';
 import { DashboardStore } from './dashboard.store';
 import {
@@ -29,6 +30,8 @@ describe('DashboardStore', () => {
     store = TestBed.inject(DashboardStore);
     http = TestBed.inject(HttpTestingController);
     await settle();
+    // The selectors' options; their own behaviour is tested with MetaService.
+    http.expectOne(META_URL).flush(metaOut());
   });
 
   afterEach(() => {
@@ -64,7 +67,7 @@ describe('DashboardStore', () => {
     await settle();
   }
 
-  it('starts all five requests at once, before any of them answers', () => {
+  it('starts all five panel requests at once, before any of them answers', () => {
     const urls = http
       .match((request) => request.url.startsWith(ANALYTICS_URL))
       .map((request) => request.request.urlWithParams.slice(ANALYTICS_URL.length + 1));
@@ -83,6 +86,7 @@ describe('DashboardStore', () => {
   it('holds each answer in its own panel', async () => {
     await answerAll();
 
+    expect(store.meta.value()).toEqual(metaOut());
     expect(store.summary.value()).toEqual(summaryOut());
     expect(store.revenue.value()).toEqual(revenueMonthlyOut());
     expect(store.topCustomers.value()).toEqual(topCustomersOut());

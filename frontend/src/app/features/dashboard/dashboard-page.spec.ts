@@ -4,6 +4,8 @@ import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/test
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { META_URL } from '../../core/api/meta.service';
+import { metaOut } from '../../core/api/testing';
 import { provideFakeCharts } from '../../shared/chart/testing';
 import { ANALYTICS_URL } from './analytics-api';
 import { DashboardPage } from './dashboard-page';
@@ -46,6 +48,7 @@ describe('DashboardPage', () => {
     }
     page = element;
     await settle();
+    http.expectOne(META_URL).flush(metaOut());
   }
 
   /**
@@ -128,5 +131,21 @@ describe('DashboardPage', () => {
 
     expect(page.querySelector('.deferred--revenue')).toBeNull();
     expect(page.querySelector('dp-revenue-chart h2')?.textContent).toBe('Monthly revenue');
+  });
+
+  it('puts a chosen country in the URL and loads its top customers', async () => {
+    await open('/dashboard');
+    await answerAll();
+
+    const select = page.querySelector<HTMLSelectElement>('#customers-country');
+    if (select === null) {
+      throw new Error('No country select');
+    }
+    select.value = 'GB';
+    select.dispatchEvent(new Event('change'));
+    await settle();
+
+    expect(TestBed.inject(Router).url).toBe('/dashboard?country=GB');
+    expect(await answerAll()).toEqual(['top-customers?country=GB&limit=10&days=365']);
   });
 });

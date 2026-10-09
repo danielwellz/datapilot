@@ -6,6 +6,7 @@ import { DashboardParams, paramsFromQuery, paramsToQuery } from './dashboard-par
 import { DashboardStore } from './dashboard.store';
 import { KpiRow } from './kpi-row';
 import { RevenueChart } from './revenue-chart';
+import { TopCustomers } from './top-customers';
 
 /**
  * The analytics dashboard. The URL's query string holds the selectors: this
@@ -14,7 +15,7 @@ import { RevenueChart } from './revenue-chart';
  */
 @Component({
   selector: 'dp-dashboard-page',
-  imports: [KpiRow, RevenueChart],
+  imports: [KpiRow, RevenueChart, TopCustomers],
   providers: [DashboardStore],
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',

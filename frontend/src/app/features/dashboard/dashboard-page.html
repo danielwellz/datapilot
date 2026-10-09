@@ -24,4 +24,13 @@
       <p class="panel__placeholder">Loading monthly revenue…</p>
     </section>
   }
+
+  <div class="pair">
+    <dp-top-customers
+      [panel]="store.topCustomers"
+      [meta]="store.meta"
+      [country]="store.params().country"
+      (countryChange)="select({ country: $event })"
+    />
+  </div>
 </section>

@@ -7,3 +7,11 @@
 .deferred--revenue {
   min-height: 422px;
 }
+
+// The rankings side by side when both fit, stacked otherwise.
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 34rem), 1fr));
+  align-items: start;
+  gap: var(--space-5);
+}

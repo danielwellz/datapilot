@@ -21,7 +21,7 @@
     font-weight: var(--weight-medium);
   }
 
-  tbody tr:last-child td {
+  tbody tr:last-child > * {
     border-bottom: 0;
   }
 
