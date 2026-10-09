@@ -11,6 +11,8 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",
+    // ES2023.Intl types Intl.NumberFormat formatting a decimal string exactly.
+    "lib": ["ES2022", "ES2023.Intl", "DOM", "DOM.Iterable"],
     "module": "preserve"
   },
   "angularCompilerOptions": {
