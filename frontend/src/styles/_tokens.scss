@@ -10,8 +10,8 @@
   --color-graphite: #525c6b;
   --color-ink: #121821;
   --color-signal: #2b3fbf;
-  --color-up: #13714b;
-  --color-down: #b42f28;
+  --color-favorable: #13714b;
+  --color-unfavorable: #b42f28;
 
   // Rules are too light for control boundaries, which need 3:1 (WCAG 1.4.11).
   --color-control-border: #808a98;
@@ -25,6 +25,15 @@
   --chart-4: #86398a;
   --chart-5: #525c6b;
 
+  // Sequential scale for the cohort heatmap, from the cobalt tint to cobalt
+  // in even OKLab steps. Steps 1 to 3 take ink, 4 and 5 the text-on-cobalt
+  // color; every pair reaches 4.5:1 (docs/design.md).
+  --heat-1: #e8ebfa;
+  --heat-2: #b3c2ee;
+  --heat-3: #8198e1;
+  --heat-4: #536ed1;
+  --heat-5: #2b3fbf;
+
   --shadow-overlay: 0 2px 4px rgb(18 24 33 / 8%), 0 8px 24px rgb(18 24 33 / 12%);
 }
 
@@ -37,8 +46,8 @@
   --color-graphite: #9aa4b3;
   --color-ink: #e6eaf0;
   --color-signal: #93a2ff;
-  --color-up: #4fc48d;
-  --color-down: #ff7f73;
+  --color-favorable: #4fc48d;
+  --color-unfavorable: #ff7f73;
 
   --color-control-border: #717b8a;
   --color-signal-tint: #262e45;
@@ -50,6 +59,12 @@
   --chart-3: #5eb8d6;
   --chart-4: #d68ad9;
   --chart-5: #9aa4b3;
+
+  --heat-1: #262e45;
+  --heat-2: #3f496f;
+  --heat-3: #5a659d;
+  --heat-4: #7683cd;
+  --heat-5: #93a2ff;
 
   // On a dark page a shadow barely shows, so the overlay also gets a rule.
   --shadow-overlay: 0 0 0 1px #323a47, 0 8px 24px rgb(0 0 0 / 40%);

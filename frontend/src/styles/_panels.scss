@@ -1,0 +1,125 @@
+// Dashboard panels: a sheet with a header that names the panel, states its
+// period and holds its selector.
+
+.panel {
+  --panel-padding: var(--space-5);
+
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--panel-padding);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-sheet);
+  background: var(--color-sheet);
+
+  @media (max-width: 599.98px) {
+    --panel-padding: var(--space-4);
+  }
+}
+
+.panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+
+.panel__title {
+  font-size: var(--text-section);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-section);
+}
+
+// Every panel says which period it covers, so nobody assumes the KPI
+// period selector applies to it.
+.panel__period {
+  color: var(--color-graphite);
+}
+
+.panel__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+// Numbers of the previous selection while the new ones load: visible,
+// clearly not current.
+.panel__body {
+  min-width: 0;
+  transition: opacity var(--duration-state) var(--ease-out);
+}
+
+.panel__body--stale {
+  opacity: 0.45;
+}
+
+// A reserved area for content that has not arrived or rendered yet, the
+// same height as what replaces it, so nothing below jumps.
+.panel__placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--color-graphite);
+}
+
+// A row of radio buttons drawn as one control, for a choice of a few options.
+.segmented {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.segmented__option {
+  position: relative;
+
+  input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--control-height);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--color-control-border);
+    background: var(--color-sheet);
+    color: var(--color-ink);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: background-color var(--duration-state) var(--ease-out);
+  }
+
+  & + & span {
+    margin-left: -1px;
+  }
+
+  &:first-of-type span {
+    border-radius: var(--radius-control) 0 0 var(--radius-control);
+  }
+
+  &:last-of-type span {
+    border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  }
+
+  span:hover {
+    background: var(--color-signal-tint);
+  }
+
+  input:checked + span {
+    position: relative;
+    border-color: var(--color-signal);
+    background: var(--color-signal);
+    color: var(--color-on-signal);
+  }
+
+  input:focus-visible + span {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid var(--color-signal);
+    outline-offset: 2px;
+  }
+}

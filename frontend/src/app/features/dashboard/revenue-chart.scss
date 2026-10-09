@@ -1,0 +1,5 @@
+// The chart's height and its legend, so the answer replaces the
+// placeholder without moving anything below it.
+.revenue__placeholder {
+  min-height: calc(280px + var(--leading-caption) + var(--space-3));
+}

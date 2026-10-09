@@ -1,0 +1,40 @@
+// Placeholders for the deferred panels, as tall as the panels they stand in
+// for, so the page does not jump when a panel renders.
+.deferred {
+  align-content: center;
+}
+
+.deferred--revenue {
+  min-height: 422px;
+}
+
+.deferred--products {
+  min-height: 446px;
+}
+
+.deferred--cohorts {
+  min-height: 681px;
+}
+
+// At phone widths headers wrap and the heatmap's notes take more lines.
+@media (max-width: 599.98px) {
+  .deferred--revenue {
+    min-height: 474px;
+  }
+
+  .deferred--products {
+    min-height: 490px;
+  }
+
+  .deferred--cohorts {
+    min-height: 797px;
+  }
+}
+
+// The rankings side by side when both fit, stacked otherwise.
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 34rem), 1fr));
+  align-items: start;
+  gap: var(--space-5);
+}

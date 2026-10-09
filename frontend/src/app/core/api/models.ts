@@ -137,3 +137,159 @@ export interface OrderOut {
   customer: CustomerOut;
   items: OrderItemOut[];
 }
+
+/**
+ * A relative change against the previous period as a JSON number: 0.25 is
+ * +25%. Null when the previous value is zero or unknown.
+ */
+export type Change = number | null;
+
+/** `GET /api/analytics/summary`. */
+export interface SummaryQuery {
+  /** Whole UTC days ending yesterday, 1 to 365. */
+  days?: number;
+}
+
+/** `GET /api/analytics/revenue-monthly`. */
+export interface RevenueMonthlyQuery {
+  /** Complete UTC months ending last month, 1 to 36. */
+  months?: number;
+}
+
+/** `GET /api/analytics/top-customers`. */
+export interface TopCustomersQuery {
+  /** Every country when left out. */
+  country?: string;
+  /** The worst rank returned in each country; ties can return more rows. */
+  limit?: number;
+  days?: number;
+}
+
+/** `GET /api/analytics/products`. */
+export interface ProductRankingQuery {
+  /** Every category when left out. */
+  category?: string;
+  /** The worst rank returned; ties can return more rows. */
+  limit?: number;
+  days?: number;
+}
+
+/** `GET /api/analytics/cohorts`. */
+export interface CohortsQuery {
+  /** Monthly signup cohorts, the newest from last month, 1 to 24. */
+  months?: number;
+}
+
+export interface PeriodOut {
+  /** First UTC day of the period (`YYYY-MM-DD`). */
+  start_date: string;
+  /** Last UTC day of the period, included. */
+  end_date: string;
+}
+
+export interface MoneyMetricOut {
+  /** Null only for an average over no orders. */
+  current: string | null;
+  previous: string | null;
+  change: Change;
+}
+
+export interface CountMetricOut {
+  current: number;
+  previous: number;
+  change: Change;
+}
+
+export interface RateMetricOut {
+  /** A fraction: 0.1234 is 12.34%. Null when the period has no orders. */
+  current: number | null;
+  previous: number | null;
+  change: Change;
+}
+
+export interface SummaryOut {
+  period: PeriodOut;
+  previous_period: PeriodOut;
+  /** Total of paid orders. */
+  revenue: MoneyMetricOut;
+  /** Paid orders. */
+  orders: CountMetricOut;
+  average_order_value: MoneyMetricOut;
+  /** Customers with at least one paid order. */
+  active_customers: CountMetricOut;
+  /** Refunded orders divided by all orders placed. */
+  refund_rate: RateMetricOut;
+}
+
+export interface MonthlyRevenueOut {
+  /** First day of the month (`YYYY-MM-DD`). */
+  month: string;
+  revenue: string;
+  /** Paid orders. */
+  orders: number;
+  revenue_change_mom: Change;
+  revenue_change_yoy: Change;
+  /** Average revenue of this month and the two before it. */
+  revenue_moving_average_3m: string;
+}
+
+/** Oldest month first, every month present. */
+export interface RevenueMonthlyOut {
+  items: MonthlyRevenueOut[];
+}
+
+export interface TopCustomerOut {
+  country: string;
+  /** Rank by revenue within the country; ties share a rank. */
+  rank: number;
+  customer_id: number;
+  name: string;
+  revenue: string;
+  /** Paid orders in the period. */
+  orders: number;
+  last_order_at: string;
+}
+
+/** By country, then rank. */
+export interface TopCustomersOut {
+  items: TopCustomerOut[];
+}
+
+export interface ProductRankOut {
+  /** Rank by revenue; ties share a rank. */
+  rank: number;
+  product_id: number;
+  name: string;
+  category: string;
+  revenue: string;
+  /** Units sold in paid orders. */
+  units: number;
+  /** Share of its category's revenue; null if the category earned nothing. */
+  category_share: number | null;
+}
+
+/** Best first. */
+export interface ProductRankingOut {
+  items: ProductRankOut[];
+}
+
+export interface CohortMonthOut {
+  /** 0 is the signup month itself. */
+  months_since_signup: number;
+  active_customers: number;
+  retention_rate: number;
+}
+
+export interface CohortOut {
+  /** First day of the signup month (`YYYY-MM-DD`). */
+  cohort_month: string;
+  /** Size of the cohort. */
+  customers: number;
+  /** One entry per month from signup to last month. */
+  retention: CohortMonthOut[];
+}
+
+/** Oldest cohort first; months without signups have no cohort. */
+export interface CohortsOut {
+  items: CohortOut[];
+}

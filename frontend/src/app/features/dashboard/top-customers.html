@@ -1,0 +1,94 @@
+<section
+  class="panel"
+  aria-labelledby="customers-title"
+  [attr.aria-busy]="panel().status() === 'loading'"
+>
+  <header class="panel__header">
+    <div>
+      <h2 id="customers-title" class="panel__title">Top customers</h2>
+      <p class="panel__period">Paid revenue over the last {{ days }} complete days</p>
+    </div>
+    <div class="panel__controls">
+      <dp-panel-select
+        controlId="customers-country"
+        label="Country"
+        allLabel="All countries, best of each"
+        [options]="countries()"
+        [value]="country()"
+        [failed]="meta().status() === 'failed'"
+        (valueChange)="countryChange.emit($event)"
+        (retry)="meta().retry()"
+      />
+    </div>
+  </header>
+
+  @switch (view()) {
+    @case ('failed') {
+      <dp-panel-error
+        subject="The top customers"
+        [error]="panel().error()"
+        (retry)="panel().retry()"
+      />
+    }
+    @case ('loading') {
+      <p class="panel__placeholder customers__placeholder">Loading the top customers…</p>
+    }
+    @case ('empty') {
+      <p class="state">{{ emptyText() }}</p>
+    }
+    @default {
+      <div
+        class="table-scroll panel__body"
+        [class.panel__body--stale]="panel().stale()"
+        role="region"
+        aria-labelledby="customers-caption"
+        tabindex="0"
+      >
+        <table class="data-table">
+          <caption id="customers-caption" class="visually-hidden">
+            {{
+              caption()
+            }}
+          </caption>
+          <thead>
+            <tr>
+              @if (country() === null) {
+                <th scope="col">Country</th>
+              } @else {
+                <th scope="col" class="data-table__number">Rank</th>
+              }
+              <th scope="col">Customer</th>
+              <th scope="col" class="data-table__number">Paid orders</th>
+              <th scope="col" class="data-table__number">Revenue</th>
+              <th scope="col">Last order (UTC)</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.country + row.customer_id) {
+              <tr>
+                @if (country() === null) {
+                  <td>{{ countryName(row.country) }}</td>
+                } @else {
+                  <td class="data-table__number">{{ row.rank }}</td>
+                }
+                <th scope="row" class="customers__name">
+                  <a
+                    routerLink="/orders"
+                    [queryParams]="{ customer_id: row.customer_id }"
+                    [attr.aria-label]="'Orders of ' + row.name"
+                    >{{ row.name }}</a
+                  >
+                </th>
+                <td class="data-table__number">{{ formatCount(row.orders) }}</td>
+                <td class="data-table__number"><dp-money [amount]="row.revenue" /></td>
+                <td>
+                  <time [attr.datetime]="row.last_order_at">{{ row.last_order_at | utcDate }}</time>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</section>

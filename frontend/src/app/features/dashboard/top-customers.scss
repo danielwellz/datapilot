@@ -1,0 +1,9 @@
+// A row header that reads like a cell: the name is the row's label, not a heading.
+.customers__name {
+  font-weight: var(--weight-regular);
+}
+
+// Ten table rows and their header, so the answer replaces the placeholder in place.
+.customers__placeholder {
+  min-height: calc(11 * var(--row-height));
+}

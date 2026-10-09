@@ -6,10 +6,11 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { failWith } from '../../core/api/testing';
 import { textOf } from '../../shared/forms/testing';
 import { OrderDetailPage } from './order-detail-page';
 import { ORDERS_URL } from './orders-api';
-import { failWith, orderOut } from './testing';
+import { orderOut } from './testing';
 
 @Component({ template: '' })
 class List {}

@@ -27,8 +27,9 @@ import {
   OrderSort,
   OrderStatus,
 } from '../../core/api/models';
+import { countryName } from '../../shared/format/format';
 import { visibleError } from '../../shared/forms/form-errors';
-import { CHANNEL_LABELS, STATUS_LABELS, countryName } from './order-labels';
+import { CHANNEL_LABELS, STATUS_LABELS } from './order-labels';
 import {
   NO_FILTERS,
   OrderFilters,

@@ -1,0 +1,57 @@
+<section class="page" aria-labelledby="dashboard-title">
+  <header class="page__header">
+    <h1 id="dashboard-title">Dashboard</h1>
+    <p class="page__lead">
+      Paid revenue, orders and customers over complete UTC days and months, up to yesterday.
+    </p>
+  </header>
+
+  <dp-kpi-row
+    [panel]="store.summary"
+    [days]="store.params().days"
+    (daysChange)="select({ days: $event })"
+  />
+
+  <!--
+    The data of every panel is already loading (the store started it); what
+    waits for the viewport is the chart code, Chart.js included, and the
+    drawing. Placeholders are the height of the panel that replaces them.
+  -->
+  @defer (on viewport; prefetch on idle) {
+    <dp-revenue-chart [panel]="store.revenue" />
+  } @placeholder {
+    <section class="panel deferred deferred--revenue" aria-label="Monthly revenue">
+      <p class="panel__placeholder">Loading monthly revenue…</p>
+    </section>
+  }
+
+  <div class="pair">
+    <dp-top-customers
+      [panel]="store.topCustomers"
+      [meta]="store.meta"
+      [country]="store.params().country"
+      (countryChange)="select({ country: $event })"
+    />
+
+    @defer (on viewport; prefetch on idle) {
+      <dp-product-ranking
+        [panel]="store.products"
+        [meta]="store.meta"
+        [category]="store.params().category"
+        (categoryChange)="select({ category: $event })"
+      />
+    } @placeholder {
+      <section class="panel deferred deferred--products" aria-label="Top products">
+        <p class="panel__placeholder">Loading the product ranking…</p>
+      </section>
+    }
+  </div>
+
+  @defer (on viewport; prefetch on idle) {
+    <dp-cohort-heatmap [panel]="store.cohorts" />
+  } @placeholder {
+    <section class="panel deferred deferred--cohorts" aria-label="Retention by signup month">
+      <p class="panel__placeholder">Loading the retention cohorts…</p>
+    </section>
+  }
+</section>

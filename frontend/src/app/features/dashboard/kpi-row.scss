@@ -1,0 +1,74 @@
+// The metrics run to the panel's edges, ruled like a table whatever the
+// number of columns: every cell draws its top and left rule, and the left
+// rules of the first column are clipped away. The first row's top rule
+// separates the metrics from the header.
+.kpis {
+  margin: 0 calc(-1 * var(--panel-padding)) calc(-1 * var(--panel-padding));
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+.kpis__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  margin: 0 0 0 -1px;
+}
+
+// Columns follow the room the panel has: never four and an orphan.
+@container (max-width: 20rem) {
+  .kpis__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@container (min-width: 36rem) {
+  .kpis__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@container (min-width: 62rem) {
+  .kpis__grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.kpi {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--panel-padding);
+  border-top: 1px solid var(--color-rule);
+  border-left: 1px solid var(--color-rule);
+  // The figure is sized from this cell's width, so a long amount always fits.
+  container-type: inline-size;
+}
+
+.kpi__figure,
+.kpi__change {
+  margin: 0;
+}
+
+.kpi__label {
+  color: var(--color-graphite);
+  font-weight: var(--weight-medium);
+}
+
+.kpi__figure {
+  min-height: var(--leading-figure);
+  // About 12% of the width fits a 14-character amount such as $21,345,678.90.
+  font-size: min(var(--text-figure), 12cqi);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-figure);
+  white-space: nowrap;
+}
+
+.kpi__change {
+  font-size: var(--text-table);
+  line-height: var(--leading-table);
+}
+
+.kpi__previous {
+  color: var(--color-graphite);
+  white-space: nowrap;
+}

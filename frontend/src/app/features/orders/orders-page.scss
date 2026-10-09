@@ -54,25 +54,6 @@
   background: var(--color-sheet);
 }
 
-.skeleton__bar {
-  display: inline-block;
-  width: 10rem;
-  height: 10px;
-  border-radius: var(--radius-control);
-  background: var(--color-rule);
-  animation: skeleton-pulse 1.2s var(--ease-out) infinite alternate;
-}
-
-.skeleton__bar--short {
-  width: 4rem;
-}
-
-@keyframes skeleton-pulse {
-  to {
-    opacity: 0.5;
-  }
-}
-
 @media (max-width: 767px) {
   // The relative time repeats the date; narrow screens keep the date only.
   .orders__relative {

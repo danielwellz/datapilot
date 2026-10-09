@@ -5,10 +5,11 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 
 import { ApiError, parseApiError } from '../../core/api/api-error';
+import { countryName } from '../../shared/format/format';
 import { RelativeTimePipe, UtcDatePipe, UtcDateTimePipe } from '../../shared/format/format.pipes';
 import { Money } from '../../shared/format/money';
 import { validId } from './order-filters';
-import { CHANNEL_LABELS, countryName } from './order-labels';
+import { CHANNEL_LABELS } from './order-labels';
 import { OrderStatusLabel } from './order-status';
 import { OrdersApi } from './orders-api';
 
