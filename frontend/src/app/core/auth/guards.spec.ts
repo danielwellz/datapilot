@@ -67,6 +67,10 @@ describe('guards', () => {
     expect(await visit('/orders?status=paid')).toBe('/login?returnUrl=%2Forders%3Fstatus%3Dpaid');
   });
 
+  it('sends a visitor from the home page to a plain login page', async () => {
+    expect(await visit(HOME_URL)).toBe('/login');
+  });
+
   it('shows the login page to a visitor', async () => {
     expect(await visit('/login')).toBe('/login');
   });

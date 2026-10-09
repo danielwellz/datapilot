@@ -39,7 +39,9 @@ export const authGuard: CanActivateFn = (_route, state) => {
   if (inject(AuthService).isAuthenticated()) {
     return true;
   }
-  return inject(Router).createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+  // Login goes home anyway, so the home page needs no return URL.
+  const queryParams = state.url === HOME_URL ? {} : { returnUrl: state.url };
+  return inject(Router).createUrlTree(['/login'], { queryParams });
 };
 
 /** Keeps signed-in users off the login and register pages. */
