@@ -3,25 +3,6 @@
   color: var(--color-graphite);
 }
 
-.state {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-3);
-  font-size: var(--text-lead);
-  line-height: var(--leading-lead);
-}
-
-.state__title {
-  font-weight: var(--weight-semibold);
-}
-
-.request-id {
-  color: var(--color-graphite);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
-  line-height: var(--leading-caption);
-}
-
 .orders {
   transition: opacity var(--duration-state) var(--ease-out);
 }

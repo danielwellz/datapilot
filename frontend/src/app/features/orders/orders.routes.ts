@@ -1,6 +1,8 @@
-import { Routes } from '@angular/router';
+import { ResolveFn, Routes } from '@angular/router';
 
 import { OrdersStore } from './orders.store';
+
+const orderTitle: ResolveFn<string> = (route) => `Order ${route.paramMap.get('id') ?? ''}`;
 
 export const ORDERS_ROUTES: Routes = [
   {
@@ -13,6 +15,11 @@ export const ORDERS_ROUTES: Routes = [
         path: '',
         title: 'Orders',
         loadComponent: () => import('./orders-page').then((m) => m.OrdersPage),
+      },
+      {
+        path: ':id',
+        title: orderTitle,
+        loadComponent: () => import('./order-detail-page').then((m) => m.OrderDetailPage),
       },
     ],
   },
