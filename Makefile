@@ -18,13 +18,19 @@ runs ?= 10
 DEMO_COMPOSE := docker compose -f docker-compose.demo.yml --env-file .env --env-file .env.demo
 DEMO_SECRETS := DEMO_SECRET_KEY DEMO_JWT_SECRET_KEY DEMO_POSTGRES_PASSWORD \
 	DEMO_APP_DB_PASSWORD DEMO_READONLY_DB_PASSWORD
+# `make demo scale=full`: the full dataset's order count (SCALES in
+# app/seed/generator.py), and the free space Docker's disk must have before
+# loading it: about 2 GB of tables and indexes, plus the write-ahead log the
+# load produces before checkpoints recycle it, with room to spare.
+FULL_SCALE_ORDERS := 2000000
+DEMO_FULL_MIN_FREE_GB := 6
 
 .PHONY: help up down logs reset-db \
 	be-install be-dev be-stop be-test be-lint be-format be-typecheck \
 	db-migrate db-upgrade db-roles seed explain explain-analytics eval-ask \
 	fe-install fe-dev fe-test fe-lint fe-format fe-build \
 	e2e-install e2e e2e-typecheck \
-	hooks check demo demo-down demo-reset demo-logs
+	hooks check demo demo-full-data demo-down demo-reset demo-logs
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -155,11 +161,42 @@ check: be-lint be-typecheck be-test fe-lint fe-test fe-build e2e-typecheck ## Ru
 	done > $@
 	@echo "Wrote random demo secrets to $@."
 
-demo: .env.demo ## Build and run the production-like stack at http://localhost:8080
+demo: .env.demo ## Build and run the production-like stack at http://localhost:8080 [scale=full]
 	@test -f .env || { echo "Create .env first: cp .env.example .env"; exit 1; }
+	@case "$(scale)" in \
+		small) ;; \
+		full) $(MAKE) --no-print-directory demo-full-data ;; \
+		*) echo "scale must be small or full, not $(scale)." >&2; exit 1 ;; \
+	esac
 	$(DEMO_COMPOSE) up --build --detach --wait
 	@echo "DataPilot is running at http://localhost:8080"
 	@echo "Log in as demo@datapilot.dev with the password DataPilot-demo-2026."
+
+# Loads the full dataset before the API starts: the seed truncates the sales
+# tables in one transaction, so a running API would wait on its locks and
+# answer 503 for the whole load. Skipped when the data is already there; the
+# migrate job's `seed --if-empty` then leaves it alone on every start.
+demo-full-data: .env.demo
+	$(DEMO_COMPOSE) build
+	$(DEMO_COMPOSE) up --detach --wait postgres redis
+	@orders=$$($(DEMO_COMPOSE) exec -T postgres \
+		psql -U datapilot -d datapilot -tAc 'SELECT count(*) FROM orders' 2>/dev/null || echo 0); \
+	if [ "$$orders" -ge $(FULL_SCALE_ORDERS) ]; then \
+		echo "The demo stack already holds the full dataset ($$orders orders)."; \
+		exit 0; \
+	fi; \
+	free_kb=$$($(DEMO_COMPOSE) exec -T postgres df -Pk /var/lib/postgresql/data | awk 'NR == 2 { print $$4 }'); \
+	free_gb=$$((free_kb / 1024 / 1024)); \
+	if [ "$$free_gb" -lt $(DEMO_FULL_MIN_FREE_GB) ]; then \
+		echo "Docker's disk has $$free_gb GB free; the full dataset needs at least $(DEMO_FULL_MIN_FREE_GB) GB." >&2; \
+		echo "Free space (for example docker builder prune) or run make demo for the small dataset." >&2; \
+		exit 1; \
+	fi; \
+	echo "Loading the full dataset (2,000,000 orders) into the demo stack. It replaces the"; \
+	echo "demo's sales data and takes about 2 minutes and 2 GB of Docker disk ($$free_gb GB free)."; \
+	$(DEMO_COMPOSE) stop backend web; \
+	$(DEMO_COMPOSE) run --rm migrate \
+		sh -c "flask db upgrade && flask db-roles && flask seed --scale full --yes"
 
 demo-down: ## Stop the demo stack (its data volumes are kept)
 	$(DEMO_COMPOSE) down
