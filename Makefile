@@ -20,7 +20,7 @@ DEMO_SECRETS := DEMO_SECRET_KEY DEMO_JWT_SECRET_KEY DEMO_POSTGRES_PASSWORD \
 	DEMO_APP_DB_PASSWORD DEMO_READONLY_DB_PASSWORD
 
 .PHONY: help up down logs reset-db \
-	be-install be-dev be-test be-lint be-format be-typecheck \
+	be-install be-dev be-stop be-test be-lint be-format be-typecheck \
 	db-migrate db-upgrade db-roles seed explain explain-analytics eval-ask \
 	fe-install fe-dev fe-test fe-lint fe-format fe-build \
 	e2e-install e2e e2e-typecheck \
@@ -35,7 +35,7 @@ help: ## List available targets
 up: ## Start PostgreSQL and Redis and wait until they are healthy
 	docker compose up -d --wait
 
-down: ## Stop PostgreSQL and Redis (data volumes are kept)
+down: be-stop ## Stop PostgreSQL and Redis (data volumes are kept)
 	docker compose down
 
 logs: ## Follow PostgreSQL and Redis logs
@@ -50,8 +50,26 @@ reset-db: ## Delete the data volumes and start fresh (reruns init scripts)
 be-install: ## Install backend dependencies exactly as locked
 	cd $(BACKEND) && uv sync --locked
 
-be-dev: ## Run the Flask development server on port 5001
+be-dev: be-stop ## Run the Flask development server on port 5001
 	cd $(BACKEND) && uv run flask --app app run --debug --port $(FLASK_PORT)
+
+# When the debug server is stopped from a parent process, its reloader child
+# can survive and keep port 5001, so the next server cannot bind or requests
+# hang. Only a process running this project's `flask ... run` is stopped;
+# anything else on the port is reported and left alone.
+be-stop: ## Stop a development server still listening on port 5001
+	@for pid in $$(lsof -t -iTCP:$(FLASK_PORT) -sTCP:LISTEN 2>/dev/null); do \
+		if ps -o command= -p "$$pid" | grep -q 'flask --app app run'; then \
+			kill "$$pid"; \
+			for _ in 1 2 3 4 5 6 7 8 9 10; do \
+				kill -0 "$$pid" 2>/dev/null || break; sleep 0.5; \
+			done; \
+			echo "Stopped the development server left on port $(FLASK_PORT) (pid $$pid)."; \
+		else \
+			echo "Port $(FLASK_PORT) is used by another program (pid $$pid); stop it first." >&2; \
+			exit 1; \
+		fi; \
+	done
 
 be-test: ## Run backend tests with coverage
 	cd $(BACKEND) && uv run pytest
