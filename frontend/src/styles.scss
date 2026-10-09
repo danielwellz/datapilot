@@ -4,6 +4,7 @@
 @use 'styles/controls';
 @use 'styles/layout';
 @use 'styles/tables';
+@use 'styles/panels';
 
 // Positioning for CDK overlays, which the user menu opens in.
 @include cdk.overlay();

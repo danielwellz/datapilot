@@ -1,3 +1,6 @@
+import { computed, signal } from '@angular/core';
+
+import { ApiError } from '../../core/api/api-error';
 import {
   CohortsOut,
   ProductRankOut,
@@ -7,6 +10,7 @@ import {
   TopCustomerOut,
   TopCustomersOut,
 } from '../../core/api/models';
+import { Panel, PanelStatus } from './dashboard.store';
 
 /** Builders for analytics test data, shared by the dashboard specs. */
 export function summaryOut(overrides: Partial<SummaryOut> = {}): SummaryOut {
@@ -89,3 +93,34 @@ export function cohortsOut(): CohortsOut {
     ],
   };
 }
+
+/** A panel whose state a spec sets directly, to render each state of a component. */
+export interface FakePanel<T> extends Panel<T> {
+  set(state: { value?: T; status?: PanelStatus; stale?: boolean; error?: ApiError | null }): void;
+  retries: number;
+}
+
+export function fakePanel<T>(value?: T): FakePanel<T> {
+  const state = signal<{ value?: T; status: PanelStatus; stale: boolean; error: ApiError | null }>({
+    value,
+    status: value === undefined ? 'loading' : 'loaded',
+    stale: false,
+    error: null,
+  });
+  const panel: FakePanel<T> = {
+    value: computed(() => state().value),
+    status: computed(() => state().status),
+    stale: computed(() => state().stale),
+    error: computed(() => state().error),
+    retries: 0,
+    retry: () => {
+      panel.retries += 1;
+    },
+    set: (change) => {
+      state.update((current) => ({ ...current, ...change }));
+    },
+  };
+  return panel;
+}
+
+export const FAILURE = new ApiError(500, 'internal_error', 'Something went wrong.', [], 'req-9');

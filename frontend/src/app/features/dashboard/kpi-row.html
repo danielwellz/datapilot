@@ -1,0 +1,68 @@
+<section
+  class="panel"
+  aria-labelledby="kpi-title"
+  [attr.aria-busy]="panel().status() === 'loading'"
+>
+  <header class="panel__header">
+    <div>
+      <h2 id="kpi-title" class="panel__title">Key numbers</h2>
+      <p class="panel__period">{{ period() }}</p>
+    </div>
+    <fieldset class="segmented">
+      <legend class="visually-hidden">Period of the key numbers</legend>
+      @for (option of periods; track option) {
+        <label class="segmented__option">
+          <input
+            type="radio"
+            name="kpi-period"
+            [value]="option"
+            [checked]="option === days()"
+            (change)="daysChange.emit(option)"
+          />
+          <span>{{ option }} days</span>
+        </label>
+      }
+    </fieldset>
+  </header>
+
+  @if (panel().status() === 'failed') {
+    <dp-panel-error subject="The key numbers" [error]="panel().error()" (retry)="panel().retry()" />
+  } @else if (kpis(); as kpis) {
+    <div class="kpis">
+      <dl class="kpis__grid panel__body" [class.panel__body--stale]="panel().stale()">
+        @for (kpi of kpis; track kpi.label) {
+          <div class="kpi">
+            <dt class="kpi__label">{{ kpi.label }}</dt>
+            <dd class="kpi__figure">
+              @if (kpi.figure.kind === 'money') {
+                <dp-money [amount]="kpi.figure.amount" />
+              } @else {
+                {{ kpi.figure.text }}
+              }
+            </dd>
+            <dd class="kpi__change">
+              <dp-change [change]="kpi.change" [good]="kpi.good" />&ngsp;
+              @if (kpi.change !== null && kpi.previous !== null) {
+                <span class="kpi__previous">from {{ kpi.previous }}</span>
+              }
+            </dd>
+          </div>
+        }
+      </dl>
+    </div>
+  } @else {
+    <div class="kpis" aria-hidden="true">
+      <div class="kpis__grid">
+        @for (label of labels; track label) {
+          <div class="kpi">
+            <span class="kpi__label">{{ label }}</span>
+            <span class="kpi__figure"><span class="skeleton__bar"></span></span>
+            <span class="kpi__change"
+              ><span class="skeleton__bar skeleton__bar--short"></span
+            ></span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</section>

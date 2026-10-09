@@ -1,0 +1,14 @@
+<section class="page" aria-labelledby="dashboard-title">
+  <header class="page__header">
+    <h1 id="dashboard-title">Dashboard</h1>
+    <p class="page__lead">
+      Paid revenue, orders and customers over complete UTC days and months, up to yesterday.
+    </p>
+  </header>
+
+  <dp-kpi-row
+    [panel]="store.summary"
+    [days]="store.params().days"
+    (daysChange)="select({ days: $event })"
+  />
+</section>

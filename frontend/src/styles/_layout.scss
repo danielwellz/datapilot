@@ -49,3 +49,23 @@
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
 }
+
+// Placeholder bars while the first answer loads.
+.skeleton__bar {
+  display: inline-block;
+  width: 10rem;
+  height: 10px;
+  border-radius: var(--radius-control);
+  background: var(--color-rule);
+  animation: skeleton-pulse 1.2s var(--ease-out) infinite alternate;
+}
+
+.skeleton__bar--short {
+  width: 4rem;
+}
+
+@keyframes skeleton-pulse {
+  to {
+    opacity: 0.5;
+  }
+}
