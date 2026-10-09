@@ -4,6 +4,21 @@ Analytics and plain-English querying over a multi-million-row sales dataset, bui
 
 This project is under active development. Full documentation will follow.
 
+## Try it with Docker
+
+Prerequisites: Docker with Compose, GNU Make and OpenSSL.
+
+```bash
+cp .env.example .env
+make demo
+```
+
+`make demo` builds the API and web images, starts PostgreSQL, Redis, a one-shot migrate job (migrations and the small dataset), the API and Nginx, and waits until all of them are healthy. Open <http://localhost:8080> and log in as `demo@datapilot.dev` with the password `DataPilot-demo-2026`. Without API keys in `.env`, Ask your data uses the demo model, which answers the example questions.
+
+The stack runs as in production (`APP_ENV=production`, Gunicorn behind Nginx, unprivileged containers), with random secrets that `make demo` writes once to `.env.demo`. It is a separate Compose project from the development services, with its own data. `make demo-down` stops it, `make demo-reset` also deletes its data, and `make demo-logs` follows its logs. [ADR 0008](docs/adr/0008-production-images-and-demo-stack.md) explains the images, the Nginx configuration and the database roles.
+
+With the stack running, `make e2e-install` once and then `make e2e` run a browser smoke test: log in, reload, open an order and ask an example question.
+
 ## Local development
 
 Prerequisites: Docker with Compose, [uv](https://docs.astral.sh/uv/), Node.js 24 LTS (the version is pinned in `frontend/.node-version`), GNU Make.
@@ -20,7 +35,9 @@ make fe-dev      # web app on http://localhost:4200 (in a second terminal)
 
 With the API running, the interactive documentation is at <http://localhost:5001/api/docs> and the OpenAPI document at <http://localhost:5001/api/openapi.json>.
 
-Run `make help` to list every target.
+Run `make help` to list every target. `make check` is the one command to run before pushing; CI runs the same checks, then builds the demo stack and runs the smoke test against it. If the API's port is still taken by a development server that did not stop cleanly, `make be-stop` (also run by `make be-dev` and `make down`) stops it.
+
+Every request's statements are stopped after `API_STATEMENT_TIMEOUT_MS` (3 seconds), and the API answers `503` with the code `statement_timeout`. When PostgreSQL or Redis is unreachable, it answers `503 service_unavailable` and logs which one failed.
 
 ### Web app
 
@@ -42,7 +59,7 @@ make seed               # small: 2,000 customers, 100 products, 50,000 orders
 make seed scale=full    # full: 50,000 customers, 1,000 products, 2,000,000 orders
 ```
 
-The same `seed` value (default 42) and end date always produce the same rows: `cd backend && uv run flask --app app seed --scale full --seed 42 --end-date 2026-10-08`. Without `--end-date`, the history ends today (UTC). The full scale takes about 1.5 minutes on an Apple M4 laptop. The design is in [ADR 0004](docs/adr/0004-deterministic-seed-data.md).
+The same `seed` value (default 42) and end date always produce the same rows: `cd backend && uv run flask --app app seed --scale full --seed 42 --end-date 2026-10-08`. Without `--end-date`, the history ends today (UTC). The full scale takes about 1.5 minutes on an Apple M4 laptop. The design is in [ADR 0004](docs/adr/0004-deterministic-seed-data.md). Seeding replaces all sales data: `--if-empty` loads only into a database without orders (the demo stack's start-up job uses it), and with `APP_ENV=production` replacing existing data needs `--yes`.
 
 Seeding also creates a demo account: `demo@datapilot.dev` with the password `DataPilot-demo-2026`.
 
