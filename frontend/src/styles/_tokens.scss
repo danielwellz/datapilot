@@ -1,0 +1,125 @@
+// Design tokens: the only place colors, type, spacing, radius, elevation and
+// motion are defined. docs/design.md explains each value.
+
+@mixin light-colors {
+  color-scheme: light;
+
+  --color-paper: #f3f5f8;
+  --color-sheet: #ffffff;
+  --color-rule: #d3d9e1;
+  --color-graphite: #525c6b;
+  --color-ink: #121821;
+  --color-signal: #2b3fbf;
+  --color-up: #13714b;
+  --color-down: #b42f28;
+
+  // Rules are too light for control boundaries, which need 3:1 (WCAG 1.4.11).
+  --color-control-border: #808a98;
+  --color-signal-tint: #e8ebfa;
+  --color-error: #b42f28;
+  --color-on-signal: #ffffff;
+
+  --chart-1: #2b3fbf;
+  --chart-2: #99650a;
+  --chart-3: #1c6f8c;
+  --chart-4: #86398a;
+  --chart-5: #525c6b;
+
+  --shadow-overlay: 0 2px 4px rgb(18 24 33 / 8%), 0 8px 24px rgb(18 24 33 / 12%);
+}
+
+@mixin dark-colors {
+  color-scheme: dark;
+
+  --color-paper: #171c24;
+  --color-sheet: #1e242e;
+  --color-rule: #323a47;
+  --color-graphite: #9aa4b3;
+  --color-ink: #e6eaf0;
+  --color-signal: #93a2ff;
+  --color-up: #4fc48d;
+  --color-down: #ff7f73;
+
+  --color-control-border: #717b8a;
+  --color-signal-tint: #262e45;
+  --color-error: #ff7f73;
+  --color-on-signal: #171c24;
+
+  --chart-1: #93a2ff;
+  --chart-2: #e0a93e;
+  --chart-3: #5eb8d6;
+  --chart-4: #d68ad9;
+  --chart-5: #9aa4b3;
+
+  // On a dark page a shadow barely shows, so the overlay also gets a rule.
+  --shadow-overlay: 0 0 0 1px #323a47, 0 8px 24px rgb(0 0 0 / 40%);
+}
+
+:root {
+  @include light-colors;
+
+  --font-sans: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+  // Type scale: size and line height in pairs.
+  --text-caption: 0.75rem;
+  --leading-caption: 1rem;
+  --text-table: 0.8125rem;
+  --leading-table: 1.125rem;
+  --text-body: 0.875rem;
+  --leading-body: 1.25rem;
+  --text-lead: 1rem;
+  --leading-lead: 1.5rem;
+  --text-section: 1.25rem;
+  --leading-section: 1.75rem;
+  --text-page: 1.75rem;
+  --leading-page: 2.125rem;
+  --text-figure: 2.5rem;
+  --leading-figure: 2.75rem;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  // Spacing: a 4 px grid.
+  --space-half: 2px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  // Radius grows with the size of the container.
+  --radius-none: 0;
+  --radius-control: 3px;
+  --radius-sheet: 6px;
+  --radius-overlay: 8px;
+  --radius-round: 999px;
+
+  --control-height: 36px;
+  --row-height: 32px;
+  --content-max-width: 1440px;
+  --gutter: var(--space-5);
+
+  --duration-state: 120ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+  @media (max-width: 599.98px) {
+    --gutter: var(--space-4);
+  }
+}
+
+// The system preference applies unless the user picked a theme, which the
+// theme service records as data-theme on the root element.
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark-colors;
+  }
+}
+
+:root[data-theme='dark'] {
+  @include dark-colors;
+}

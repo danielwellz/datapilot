@@ -1,0 +1,79 @@
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="header">
+  <a class="header__brand" routerLink="/dashboard">DataPilot</a>
+
+  <nav class="header__nav" aria-label="Primary">
+    @for (item of navItems; track item.path) {
+      <a
+        class="header__link"
+        [routerLink]="item.path"
+        routerLinkActive="header__link--active"
+        ariaCurrentWhenActive="page"
+      >
+        {{ item.label }}
+      </a>
+    }
+  </nav>
+
+  <div class="header__actions">
+    <button
+      type="button"
+      class="button button--quiet icon-button"
+      [attr.aria-label]="themeToggleLabel()"
+      [title]="themeToggleLabel()"
+      (click)="theme.toggle()"
+    >
+      @if (theme.theme() === 'dark') {
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <circle cx="10" cy="10" r="3.5" />
+          <path
+            d="M10 2v2.5M10 15.5V18M2 10h2.5M15.5 10H18M4.3 4.3l1.8 1.8M13.9 13.9l1.8 1.8M4.3 15.7l1.8-1.8M13.9 6.1l1.8-1.8"
+          />
+        </svg>
+      } @else {
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M16.5 12.5A7 7 0 0 1 7.5 3.5a7 7 0 1 0 9 9Z" />
+        </svg>
+      }
+    </button>
+
+    @if (user(); as user) {
+      <button
+        type="button"
+        class="button button--quiet account-button"
+        [cdkMenuTriggerFor]="accountMenu"
+        [attr.aria-label]="'Account menu for ' + user.full_name"
+      >
+        <span class="account-button__initials" aria-hidden="true">{{ initials() }}</span>
+        <span class="account-button__name" aria-hidden="true">{{ user.full_name }}</span>
+      </button>
+
+      <ng-template #accountMenu>
+        <div class="menu" cdkMenu aria-labelledby="account-menu-identity">
+          <div class="menu__identity" id="account-menu-identity">
+            <span class="menu__name">{{ user.full_name }}</span>
+            <span class="menu__email">{{ user.email }}</span>
+          </div>
+          @if (theme.preference() !== 'system') {
+            <button
+              type="button"
+              class="menu__item"
+              cdkMenuItem
+              (cdkMenuItemTriggered)="theme.matchSystem()"
+            >
+              Match system theme
+            </button>
+          }
+          <button type="button" class="menu__item" cdkMenuItem (cdkMenuItemTriggered)="logout()">
+            Log out
+          </button>
+        </div>
+      </ng-template>
+    }
+  </div>
+</header>
+
+<main class="main" id="main" tabindex="-1">
+  <router-outlet />
+</main>

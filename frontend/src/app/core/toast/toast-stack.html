@@ -1,0 +1,19 @@
+<section class="stack" aria-label="Notifications" aria-live="polite">
+  @for (toast of toastService.toasts(); track toast.id) {
+    <div class="toast" [class.toast--error]="toast.kind === 'error'">
+      <div class="toast__text">
+        <p>{{ toast.message }}</p>
+        @if (toast.detail) {
+          <p class="toast__detail">{{ toast.detail }}</p>
+        }
+      </div>
+      <button
+        type="button"
+        class="button button--quiet toast__dismiss"
+        (click)="toastService.dismiss(toast.id)"
+      >
+        Dismiss
+      </button>
+    </div>
+  }
+</section>

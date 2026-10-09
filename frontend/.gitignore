@@ -1,0 +1,6 @@
+# Angular build and tool output
+/dist/
+/out-tsc/
+/tmp/
+/.angular/
+/coverage/

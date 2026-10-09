@@ -1,0 +1,84 @@
+// Buttons and form fields, shared by every feature.
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-control);
+  background: var(--color-sheet);
+  color: var(--color-ink);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-state) var(--ease-out),
+    border-color var(--duration-state) var(--ease-out);
+
+  &:hover:not(:disabled) {
+    background: var(--color-signal-tint);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.button--primary {
+  border-color: var(--color-signal);
+  background: var(--color-signal);
+  color: var(--color-on-signal);
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-signal) 88%, var(--color-ink));
+  }
+}
+
+.button--quiet {
+  border-color: transparent;
+  background: transparent;
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.field__label {
+  font-weight: var(--weight-medium);
+}
+
+.field__hint {
+  color: var(--color-graphite);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.field__error {
+  color: var(--color-error);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.input {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-control);
+  background: var(--color-sheet);
+  color: var(--color-ink);
+
+  &[aria-invalid='true'] {
+    border-color: var(--color-error);
+  }
+}
+
+.form-alert {
+  padding: var(--space-3);
+  border-left: 3px solid var(--color-error);
+  background: var(--color-sheet);
+}

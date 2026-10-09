@@ -1,0 +1,8 @@
+@use '@angular/cdk';
+@use 'styles/tokens';
+@use 'styles/base';
+@use 'styles/controls';
+@use 'styles/layout';
+
+// Positioning for CDK overlays, which the user menu opens in.
+@include cdk.overlay();
