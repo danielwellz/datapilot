@@ -169,6 +169,29 @@ describe('AskComposer', () => {
     expect(textarea().getAttribute('aria-invalid')).toBe('false');
   });
 
+  it('shows no error when an empty box loses focus', async () => {
+    await render();
+
+    textarea().dispatchEvent(new Event('blur'));
+    await fixture.whenStable();
+
+    expect(errorText()).toBeNull();
+  });
+
+  it('forgets an earlier failed attempt once a question is asked', async () => {
+    await render();
+    await press({});
+    expect(errorText()).toBe('Write a question first.');
+    await type('Orders by channel this year');
+    await press({});
+    expectAsk();
+
+    textarea().dispatchEvent(new Event('blur'));
+    await fixture.whenStable();
+
+    expect(errorText()).toBeNull();
+  });
+
   it('counts characters near the limit and refuses a question over it', async () => {
     await render();
     await type('x'.repeat(MAX_QUESTION_LENGTH - 101));

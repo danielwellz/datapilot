@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -60,9 +60,15 @@ export class AskComposer {
   protected readonly showCounter = computed(() => this.length() >= COUNTER_FROM);
   protected readonly maxLength = MAX_QUESTION_LENGTH;
 
+  /**
+   * Set by an attempt to ask. A text area is marked touched on blur, so
+   * without this an empty box would show an error as soon as focus moved on.
+   */
+  private readonly attempted = signal(false);
+
   protected readonly error = computed(() => {
     this.changes();
-    return visibleError(this.form.controls.question, MESSAGES);
+    return this.attempted() ? visibleError(this.form.controls.question, MESSAGES) : null;
   });
 
   protected readonly submitLabel = computed(() => {
@@ -88,12 +94,13 @@ export class AskComposer {
   protected submit(): void {
     const control = this.form.controls.question;
     control.markAsTouched();
-    control.updateValueAndValidity();
+    this.attempted.set(true);
     if (control.invalid || !this.store.canAsk()) {
       return;
     }
     if (this.store.ask(control.value.trim())) {
       this.form.reset();
+      this.attempted.set(false);
     }
   }
 
