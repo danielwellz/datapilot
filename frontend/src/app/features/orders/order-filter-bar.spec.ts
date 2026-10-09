@@ -162,6 +162,12 @@ describe('OrderFilterBar', () => {
     expect(element('#filter-max-total').getAttribute('aria-describedby')).toBe(
       'filter-max-total-error',
     );
+
+    typeInto(bar, '#filter-min-total', '-5');
+    vi.advanceTimersByTime(TYPING_DEBOUNCE_MS);
+    fixture.detectChanges();
+    expect(textOf(bar, '#filter-min-total-error')).toBe('Enter an amount like 250 or 99.50.');
+    expect(emitted).toEqual([]);
   });
 
   it('explains an inverted range and applies nothing until it is fixed', () => {
@@ -196,6 +202,7 @@ describe('OrderFilterBar', () => {
     expect(textOf(bar, '#filter-date-error')).toBe(
       'The start date must be on or before the end date.',
     );
+    expect(element('#filter-date-to').getAttribute('aria-invalid')).toBe('true');
   });
 
   it('applies a choice that matches earlier filters after the URL changed', () => {

@@ -71,8 +71,7 @@
           formControlName="dateFrom"
           [attr.min]="firstDay()"
           [attr.max]="lastDay()"
-          [attr.aria-invalid]="errorFor('dateFrom') !== null || rangeError('date') !== null"
-          [attr.aria-describedby]="errorFor('dateFrom') ? 'filter-date-from-error' : null"
+          [attr.aria-invalid]="rangeError('date') !== null"
         />
       </div>
       <div class="field">
@@ -84,17 +83,10 @@
           formControlName="dateTo"
           [attr.min]="firstDay()"
           [attr.max]="lastDay()"
-          [attr.aria-invalid]="errorFor('dateTo') !== null || rangeError('date') !== null"
-          [attr.aria-describedby]="errorFor('dateTo') ? 'filter-date-to-error' : null"
+          [attr.aria-invalid]="rangeError('date') !== null"
         />
       </div>
     </div>
-    @if (errorFor('dateFrom'); as message) {
-      <p id="filter-date-from-error" class="field__error">{{ message }}</p>
-    }
-    @if (errorFor('dateTo'); as message) {
-      <p id="filter-date-to-error" class="field__error">{{ message }}</p>
-    }
     @if (rangeError('date'); as message) {
       <p id="filter-date-error" class="field__error">{{ message }}</p>
     }

@@ -27,7 +27,6 @@ import {
   compareTotals,
   hasFilters,
   sameFilters,
-  validDate,
 } from './order-filters';
 
 /** How long typing in a date or total field pauses before the list reloads. */
@@ -48,11 +47,6 @@ interface FilterFormValue {
 type MetaState = { status: 'loading' } | { status: 'loaded'; meta: MetaOut } | { status: 'failed' };
 
 const TOTAL_MESSAGE = { pattern: 'Enter an amount like 250 or 99.50.' };
-const DATE_MESSAGE = { date: 'Enter a full date.' };
-
-function dateValidator(control: AbstractControl<string>): ValidationErrors | null {
-  return control.value === '' || validDate(control.value) !== null ? null : { date: true };
-}
 
 function rangesValidator(group: AbstractControl): ValidationErrors | null {
   const { dateFrom, dateTo, minTotal, maxTotal } = (
@@ -108,8 +102,9 @@ export class OrderFilterBar {
       statuses: this.fb.group({ paid: false, refunded: false, cancelled: false }),
       country: '',
       channel: this.fb.control<OrderChannel | ''>(''),
-      dateFrom: ['', dateValidator],
-      dateTo: ['', dateValidator],
+      // A date input's value is always '' or a real day; the browser drops anything else.
+      dateFrom: '',
+      dateTo: '',
       minTotal: ['', Validators.pattern(TOTAL_PATTERN)],
       maxTotal: ['', Validators.pattern(TOTAL_PATTERN)],
       sort: this.fb.control<OrderSort>('created_at'),
@@ -199,9 +194,8 @@ export class OrderFilterBar {
     this.metaRequests.next();
   }
 
-  protected errorFor(control: 'dateFrom' | 'dateTo' | 'minTotal' | 'maxTotal'): string | null {
-    const messages = control.endsWith('Total') ? TOTAL_MESSAGE : DATE_MESSAGE;
-    return visibleError(this.form.controls[control], messages);
+  protected errorFor(control: 'minTotal' | 'maxTotal'): string | null {
+    return visibleError(this.form.controls[control], TOTAL_MESSAGE);
   }
 
   /** A range message, once the user has left one of its fields. */
