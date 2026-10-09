@@ -8,7 +8,7 @@ import { userOut } from '../../core/auth/testing';
 import { AI_URL } from './ask-api';
 import { AskPage } from './ask-page';
 import { AskStore } from './ask.store';
-import { askOut, historyPageOut, modelsOut } from './testing';
+import { askOut, historyItemOut, historyPageOut, modelsOut } from './testing';
 
 describe('AskPage', () => {
   let fixture: ComponentFixture<AskPage>;
@@ -31,7 +31,9 @@ describe('AskPage', () => {
     element = fixture.nativeElement as HTMLElement;
     http.expectOne(`${AI_URL}/models`).flush(modelsOut());
     http.expectOne(`${AI_URL}/examples`).flush({ items: [] });
-    http.expectOne((request) => request.url === `${AI_URL}/history`).flush(historyPageOut([]));
+    http
+      .expectOne((request) => request.url === `${AI_URL}/history`)
+      .flush(historyPageOut([historyItemOut({ id: 120, question: 'From history?' })]));
     await fixture.whenStable();
   });
 
@@ -76,5 +78,17 @@ describe('AskPage', () => {
 
     await ask('Two rows?', 2);
     expect(status()?.trim()).toBe('Answered: 2 rows.');
+  });
+
+  it('shows a chosen history item at the top of the thread and moves focus to it', async () => {
+    await ask('Asked now?', 1);
+
+    element.querySelector<HTMLButtonElement>('.history__item')?.click();
+    await fixture.whenStable();
+
+    const first = element.querySelector('.ask__thread li h2');
+    expect(first?.textContent.trim()).toBe('From history?');
+    expect(document.activeElement).toBe(first);
+    http.expectNone(`${AI_URL}/ask`);
   });
 });

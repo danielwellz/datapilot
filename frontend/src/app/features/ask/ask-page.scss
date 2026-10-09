@@ -1,11 +1,42 @@
+// Narrow screens stack the composer, the (folded) history and the
+// answers. Wide screens keep the history beside the composer and answers.
 .ask {
   display: grid;
+  grid-template-areas:
+    'composer'
+    'history'
+    'answers';
   gap: var(--space-5);
   align-items: start;
+
+  @media (min-width: 1100px) {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'composer history'
+      'answers history';
+  }
 }
 
-.ask__main {
+.ask__composer {
+  grid-area: composer;
+  min-width: 0;
+}
+
+.ask__history {
+  grid-area: history;
+
+  @media (min-width: 1100px) {
+    position: sticky;
+    top: var(--space-5);
+    max-height: calc(100vh - 2 * var(--space-5));
+    overflow-y: auto;
+  }
+}
+
+.ask__answers {
   display: grid;
+  grid-area: answers;
   gap: var(--space-5);
   min-width: 0;
 }

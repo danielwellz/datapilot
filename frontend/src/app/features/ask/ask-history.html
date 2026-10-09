@@ -1,0 +1,76 @@
+<section class="history" aria-labelledby="history-title">
+  <header class="history__header">
+    <h2 id="history-title" class="history__title">Your questions</h2>
+    <button
+      class="button button--quiet history__toggle"
+      type="button"
+      aria-controls="history-body"
+      [attr.aria-expanded]="expanded()"
+      (click)="expanded.set(!expanded())"
+    >
+      {{ expanded() ? 'Hide' : 'Show' }}
+    </button>
+  </header>
+
+  <div id="history-body" class="history__body" [class.history__body--open]="expanded()">
+    @switch (view()) {
+      @case ('loading') {
+        <p class="history__state">Loading your questions…</p>
+      }
+      @case ('failed') {
+        <div class="history__state" role="alert">
+          <p>Your questions couldn't be loaded.</p>
+          @if (store.historyError()?.requestId; as requestId) {
+            <p class="request-id">Request ID {{ requestId }}</p>
+          }
+          <button class="button" type="button" (click)="store.retryHistory()">Try again</button>
+        </div>
+      }
+      @case ('empty') {
+        <p class="history__state">Questions you ask are kept here, newest first.</p>
+      }
+      @default {
+        <ol class="history__list">
+          @for (item of store.history(); track item.id) {
+            <li>
+              <button
+                class="history__item"
+                type="button"
+                [attr.aria-describedby]="'history-meta-' + item.id"
+                (click)="selected.emit(item)"
+              >
+                <span class="history__question">{{ item.question }}</span>
+                <span class="history__meta" [id]="'history-meta-' + item.id">
+                  <span
+                    class="history__outcome"
+                    [class.history__outcome--failed]="item.status !== 'ok'"
+                    >{{ outcomeText(item) }}</span
+                  >
+                  <time [attr.datetime]="item.created_at">{{ askedAt(item) }}</time>
+                </span>
+              </button>
+            </li>
+          }
+        </ol>
+        @switch (store.historyStatus()) {
+          @case ('loading-more') {
+            <p class="history__state">Loading older questions…</p>
+          }
+          @case ('more-failed') {
+            <div class="history__state" role="alert">
+              <p>Older questions couldn't be loaded.</p>
+              <button class="button" type="button" (click)="store.retryHistory()">Try again</button>
+            </div>
+          }
+          @default {
+            @if (store.hasMoreHistory()) {
+              <button class="button history__more" type="button" (click)="store.loadMoreHistory()">
+                Load older questions
+              </button>
+            }
+          }
+        }
+      }
+    }
+  </div>
+</section>

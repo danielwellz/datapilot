@@ -7,11 +7,13 @@
   </header>
 
   <div class="ask">
-    <div class="ask__main">
-      <div class="sheet">
-        <dp-ask-composer />
-      </div>
+    <div class="sheet ask__composer">
+      <dp-ask-composer />
+    </div>
 
+    <dp-ask-history class="ask__history" (selected)="recall($event)" />
+
+    <div class="ask__answers">
       <p class="visually-hidden" role="status">{{ announcement() }}</p>
 
       @if (store.entries().length === 0) {
