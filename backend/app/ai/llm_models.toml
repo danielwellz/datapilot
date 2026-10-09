@@ -12,8 +12,11 @@
 # validated either way. skip_evaluation, when set, says why `make eval-ask`
 # leaves the model out unless it is named with --models.
 #
-# Order matters: with LLM_DEFAULT_MODEL unset, the default is the first
-# enabled model. Base URLs and model names were checked on 2026-10-08.
+# Order matters. With LLM_DEFAULT_MODEL unset, the default is the first
+# enabled model. With LLM_FALLBACK_MODELS unset, fallbacks take one model per
+# provider in turn, in this order (with Groq and Gemini enabled: GPT-OSS,
+# Gemini 3.5 Flash-Lite, Qwen, Gemini 3.5 Flash). The order is also the order
+# of the model picker. Base URLs and model names were checked on 2026-10-08.
 
 [providers.groq]
 type = "openai_compatible"
@@ -50,12 +53,11 @@ provider_model = "openai/gpt-oss-120b"
 json_schema = true
 
 [[models]]
-id = "gemini-3.5-flash"
+id = "gemini-3.5-flash-lite"
 provider = "gemini"
-label = "Gemini 3.5 Flash"
-provider_model = "gemini-3.5-flash"
+label = "Gemini 3.5 Flash-Lite"
+provider_model = "gemini-3.5-flash-lite"
 json_schema = true
-skip_evaluation = "Its free tier allows only 20 requests a day, fewer than one evaluation run needs."
 
 [[models]]
 id = "groq-qwen3.8-27b"
@@ -65,11 +67,12 @@ provider_model = "qwen/qwen3.8-27b"
 json_schema = true
 
 [[models]]
-id = "gemini-3.5-flash-lite"
+id = "gemini-3.5-flash"
 provider = "gemini"
-label = "Gemini 3.5 Flash-Lite"
-provider_model = "gemini-3.5-flash-lite"
+label = "Gemini 3.5 Flash"
+provider_model = "gemini-3.5-flash"
 json_schema = true
+skip_evaluation = "Its free tier allows only 20 requests a day, fewer than one evaluation run needs."
 
 [[models]]
 id = "claude-sonnet-5-5"

@@ -180,8 +180,8 @@ def test_the_default_run_leaves_out_models_marked_to_skip() -> None:
 
     assert models_to_evaluate(enabled, None) == [
         "groq-gpt-oss-120b",
-        "groq-qwen3.8-27b",
         "gemini-3.5-flash-lite",
+        "groq-qwen3.8-27b",
     ]
 
 

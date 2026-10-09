@@ -7,7 +7,8 @@ the model name sent to a provider always comes from here, never from a client.
 """
 
 import tomllib
-from collections.abc import Mapping, Sequence
+from collections import deque
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -151,11 +152,15 @@ class ModelRegistry:
             raise RegistryError(
                 f"LLM_DEFAULT_MODEL {default_model!r} is not enabled; set its provider's API key"
             )
-        # Fallbacks whose provider has no key are skipped rather than refused:
-        # the list can name every provider the deployment might have.
-        self._fallbacks = tuple(
-            self._enabled[model_id] for model_id in fallback_models if model_id in self._enabled
-        )
+        if fallback_models:
+            # Fallbacks whose provider has no key are skipped rather than
+            # refused: the list can name every provider the deployment might have.
+            self._fallbacks = tuple(
+                self._enabled[model_id] for model_id in fallback_models if model_id in self._enabled
+            )
+        else:
+            self._fallbacks = tuple(_alternate_providers(self._enabled.values()))
+        self._check_fallbacks_reach_another_provider()
 
     @classmethod
     def from_settings(
@@ -197,6 +202,51 @@ class ModelRegistry:
     def attempt_order(self, first: RegisteredModel) -> list[RegisteredModel]:
         """``first``, then the configured fallbacks to try if its provider fails."""
         fallbacks = [
-            model for model in self._fallbacks if model.id != first.id and model.id != FAKE_MODEL_ID
+            model for model in self._fallbacks if model.id != first.id and _can_fall_back(model)
         ]
         return [first, *fallbacks[:MAX_FALLBACKS]]
+
+    def _check_fallbacks_reach_another_provider(self) -> None:
+        """Refuse fallbacks that leave any model stuck on its own provider.
+
+        An outage, a refused key or a region block takes out every model of a
+        provider at once, so a fallback on the same provider rarely helps.
+        """
+        providers = {model.provider_id for model in self._enabled.values() if _can_fall_back(model)}
+        if len(providers) < 2:
+            return
+        for model in self._enabled.values():
+            if not _can_fall_back(model):
+                continue
+            if {attempt.provider_id for attempt in self.attempt_order(model)} == {
+                model.provider_id
+            }:
+                raise RegistryError(
+                    f"LLM_FALLBACK_MODELS leaves {model.id!r} without a fallback on another "
+                    f"provider, although {len(providers)} providers are enabled; add a model "
+                    "of another provider, or leave LLM_FALLBACK_MODELS empty to alternate "
+                    "providers in registry order"
+                )
+
+
+def _can_fall_back(model: RegisteredModel) -> bool:
+    return model.id != FAKE_MODEL_ID
+
+
+def _alternate_providers(models: Iterable[RegisteredModel]) -> list[RegisteredModel]:
+    """Every model but the fake one, taking one per provider in turn, in registry order.
+
+    The default fallback order: whichever model is asked first, the next
+    attempt goes to another provider whenever one is enabled.
+    """
+    queues: dict[str, deque[RegisteredModel]] = {}
+    for model in models:
+        if _can_fall_back(model):
+            queues.setdefault(model.provider_id, deque()).append(model)
+    order: list[RegisteredModel] = []
+    while queues:
+        for provider_id, queue in list(queues.items()):
+            order.append(queue.popleft())
+            if not queue:
+                del queues[provider_id]
+    return order

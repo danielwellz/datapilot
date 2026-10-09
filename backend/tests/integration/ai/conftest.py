@@ -95,8 +95,8 @@ def answer(sql: str | None, *, chart: str = "none") -> LLMAnswer:
     )
 
 
-# Two keyed providers and the demo model; alpha-1 is the default and
-# beta-1 the configured fallback.
+# Two keyed providers and the demo model; alpha-1 is the default, and each
+# provider's model is the other's fallback (the default alternating order).
 TEST_REGISTRY = RegistryConfig.model_validate(
     {
         "providers": {
@@ -144,7 +144,7 @@ TEST_REGISTRY = RegistryConfig.model_validate(
 @pytest.fixture
 def registry() -> ModelRegistry:
     keys = {"ALPHA_API_KEY": SecretStr("a"), "BETA_API_KEY": SecretStr("b")}
-    return ModelRegistry(TEST_REGISTRY, api_keys=keys, fallback_models=["beta-1"])
+    return ModelRegistry(TEST_REGISTRY, api_keys=keys)
 
 
 MakeService = Callable[..., tuple[AskService, SessionRunner]]

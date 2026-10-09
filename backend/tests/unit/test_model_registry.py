@@ -18,6 +18,7 @@ from app.extensions import get_model_registry
 from tests.conftest import AppFactory
 
 GROQ_KEY = {"GROQ_API_KEY": SecretStr("groq-key")}
+GROQ_AND_GEMINI_KEYS = GROQ_KEY | {"GEMINI_API_KEY": SecretStr("gemini-key")}
 
 LOCAL_SERVER_REGISTRY = """
 [providers.local]
@@ -101,7 +102,7 @@ def test_shipped_registry_is_valid_and_offers_the_fake_model_without_keys() -> N
 def test_shipped_registry_enables_the_models_of_providers_with_a_key() -> None:
     config = RegistryConfig.load(DEFAULT_REGISTRY_FILE)
 
-    registry = ModelRegistry(config, api_keys=GROQ_KEY | {"GEMINI_API_KEY": SecretStr("g")})
+    registry = ModelRegistry(config, api_keys=GROQ_AND_GEMINI_KEYS)
 
     assert {model.provider_id for model in registry.enabled_models} == {"groq", "gemini", "fake"}
     assert registry.default_model.id == "groq-gpt-oss-120b"
@@ -179,6 +180,79 @@ def test_attempt_order_tries_enabled_fallbacks_after_the_chosen_model() -> None:
     # gemini-c has no key, groq-b is the chosen model, and the fake model
     # only knows the example questions.
     assert [model.id for model in order] == ["groq-b", "groq-a"]
+
+
+def test_default_fallbacks_alternate_providers_in_registry_order() -> None:
+    registry = ModelRegistry(_config(), api_keys=GROQ_AND_GEMINI_KEYS)
+
+    def order(model_id: str) -> list[str]:
+        return [model.id for model in registry.attempt_order(registry.resolve(model_id))]
+
+    assert order("groq-a") == ["groq-a", "gemini-c", "groq-b"]
+    assert order("groq-b") == ["groq-b", "groq-a", "gemini-c"]
+    assert order("gemini-c") == ["gemini-c", "groq-a", "groq-b"]
+    assert order("fake") == ["fake", "groq-a", "gemini-c"]
+
+
+def test_shipped_registry_falls_back_from_groq_to_gemini_by_default() -> None:
+    config = RegistryConfig.load(DEFAULT_REGISTRY_FILE)
+    registry = ModelRegistry(config, api_keys=GROQ_AND_GEMINI_KEYS)
+
+    order = registry.attempt_order(registry.default_model)
+
+    assert [model.id for model in order] == [
+        "groq-gpt-oss-120b",
+        "gemini-3.5-flash-lite",
+        "groq-qwen3.8-27b",
+    ]
+
+
+def test_shipped_registry_gives_every_model_a_fallback_on_another_provider() -> None:
+    config = RegistryConfig.load(DEFAULT_REGISTRY_FILE)
+    keys = {
+        provider.api_key_env: SecretStr("key")
+        for provider in config.providers.values()
+        if provider.api_key_env
+    }
+    registry = ModelRegistry(config, api_keys=keys)
+
+    for model in registry.enabled_models:
+        providers = {attempt.provider_id for attempt in registry.attempt_order(model)}
+        assert len(providers) >= 2, model.id
+
+
+@pytest.mark.parametrize(
+    ("fallback_models", "stuck_model"),
+    [
+        (["groq-a", "groq-b"], "groq-a"),
+        # Fine for the default and for groq-b, but an analyst who picks
+        # gemini-c has no other model to fall back to: every model is checked.
+        (["gemini-c"], "gemini-c"),
+    ],
+)
+def test_fallbacks_that_leave_a_model_on_its_own_provider_are_refused(
+    fallback_models: list[str], stuck_model: str
+) -> None:
+    with pytest.raises(RegistryError, match=f"leaves '{stuck_model}' without a fallback"):
+        ModelRegistry(_config(), api_keys=GROQ_AND_GEMINI_KEYS, fallback_models=fallback_models)
+
+
+def test_configured_fallbacks_that_reach_another_provider_are_kept_in_order() -> None:
+    registry = ModelRegistry(
+        _config(),
+        api_keys=GROQ_AND_GEMINI_KEYS,
+        fallback_models=["gemini-c", "groq-b", "groq-a"],
+    )
+
+    order = registry.attempt_order(registry.resolve("groq-a"))
+
+    assert [model.id for model in order] == ["groq-a", "gemini-c", "groq-b"]
+
+
+def test_one_enabled_provider_needs_no_fallback_on_another() -> None:
+    registry = ModelRegistry(_config(), api_keys=GROQ_KEY, fallback_models=["groq-b"])
+
+    assert [model.id for model in registry.attempt_order(registry.resolve("groq-b"))] == ["groq-b"]
 
 
 def test_attempt_order_is_capped() -> None:
