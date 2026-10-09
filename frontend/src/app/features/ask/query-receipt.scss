@@ -130,3 +130,58 @@
   margin: 0;
   padding-inline-start: 3ch;
 }
+
+.receipt__failure {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+// A rubber stamp on the slip: the one place the receipt uses the error
+// color, always with what happened written beside it.
+.receipt__stamp {
+  padding: var(--space-half) var(--space-2);
+  border: 2px solid var(--color-error);
+  border-radius: var(--radius-control);
+  color: var(--color-error);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
+}
+
+.receipt__notes {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+
+  dt {
+    color: var(--color-graphite);
+    font-family: var(--font-mono);
+    font-size: var(--text-caption);
+    line-height: var(--leading-caption);
+  }
+
+  dd {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-lead);
+    line-height: var(--leading-lead);
+  }
+}
+
+.receipt__detail {
+  color: var(--color-graphite);
+  font-family: var(--font-mono);
+  font-size: var(--text-table);
+  line-height: var(--leading-table);
+  overflow-wrap: anywhere;
+}
+
+.receipt__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+
+  .receipt__note {
+    flex-basis: 100%;
+  }
+}
