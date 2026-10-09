@@ -20,8 +20,8 @@ DEMO_SECRETS := DEMO_SECRET_KEY DEMO_JWT_SECRET_KEY DEMO_POSTGRES_PASSWORD \
 	DEMO_APP_DB_PASSWORD DEMO_READONLY_DB_PASSWORD
 # `make demo scale=full`: the full dataset's order count (SCALES in
 # app/seed/generator.py), and the free space Docker's disk must have before
-# loading it: about 2 GB of tables and indexes, plus the write-ahead log the
-# load produces before checkpoints recycle it, with room to spare.
+# loading it. The load peaked at 2.3 GB: about 0.9 GB of tables and indexes
+# plus the write-ahead log it writes before checkpoints recycle it.
 FULL_SCALE_ORDERS := 2000000
 DEMO_FULL_MIN_FREE_GB := 6
 
@@ -185,6 +185,7 @@ demo: .env.demo ## Build and run the production-like stack at http://localhost:8
 demo-full-data: .env.demo
 	$(DEMO_COMPOSE) build
 	$(DEMO_COMPOSE) up --detach --wait postgres redis
+	@# Before the first migration there is no orders table: count it as empty.
 	@orders=$$($(DEMO_COMPOSE) exec -T postgres \
 		psql -U datapilot -d datapilot -tAc 'SELECT count(*) FROM orders' 2>/dev/null || echo 0); \
 	if [ "$$orders" -ge $(FULL_SCALE_ORDERS) ]; then \
