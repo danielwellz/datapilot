@@ -14,7 +14,7 @@ RUN npx ng build
 
 # --- Runtime ----------------------------------------------------------------
 # The unprivileged variant runs as the nginx user and listens on 8080.
-FROM nginxinc/nginx-unprivileged:1.30.5-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31.6-alpine AS runtime
 COPY --from=nginx default.conf /etc/nginx/conf.d/default.conf
 COPY --from=nginx security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /build/dist/frontend/browser /usr/share/nginx/html
