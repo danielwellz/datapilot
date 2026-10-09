@@ -19,6 +19,7 @@ const dateTime = new Intl.DateTimeFormat(LOCALE, {
 });
 const dateOnly = new Intl.DateTimeFormat(LOCALE, { dateStyle: 'medium', timeZone: 'UTC' });
 const relative = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' });
+const regions = new Intl.DisplayNames([LOCALE], { type: 'region' });
 
 export interface MoneyParts {
   sign: string;
@@ -79,4 +80,9 @@ export function formatRelative(iso: string, now: Date): string {
     }
   }
   return 'just now';
+}
+
+/** "DE" becomes "Germany"; a code the browser does not know stays as it is. */
+export function countryName(code: string): string {
+  return regions.of(code) ?? code;
 }

@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import {
+  countryName,
   formatMoney,
   formatRelative,
   formatUtcDate,
@@ -50,6 +51,13 @@ describe('formatting', () => {
       ['2026-10-08T12:00:05Z', 'just now'],
     ])('describes %s as "%s"', (iso, expected) => {
       expect(formatRelative(iso, new Date('2026-10-08T12:00:00Z'))).toBe(expected);
+    });
+  });
+
+  describe('countries', () => {
+    it('names a country by its code and keeps a code it does not know', () => {
+      expect(countryName('DE')).toBe('Germany');
+      expect(countryName('XX')).toBe('XX');
     });
   });
 
