@@ -1,0 +1,127 @@
+# The whole stack, built and run like production: `make demo`.
+#
+# A project of its own (datapilot-demo), with its own volumes and no
+# database or Redis port on the host, so it never touches the development
+# services of docker-compose.yml. Secrets come from .env.demo, which
+# `make demo` writes once with random values; model API keys and settings
+# come from .env. Without any key, Ask your data uses the demo model.
+
+name: datapilot-demo
+
+x-backend-environment: &backend-environment
+  APP_ENV: production
+  SECRET_KEY: ${DEMO_SECRET_KEY:?run make demo, which writes .env.demo}
+  JWT_SECRET_KEY: ${DEMO_JWT_SECRET_KEY:?run make demo, which writes .env.demo}
+  READONLY_DATABASE_URL: postgresql+psycopg://datapilot_readonly:${DEMO_READONLY_DB_PASSWORD:?}@postgres:5432/datapilot
+  REDIS_URL: redis://redis:6379/0
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  GROQ_API_KEY: ${GROQ_API_KEY:-}
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  LLM_DEFAULT_MODEL: ${LLM_DEFAULT_MODEL:-}
+  LLM_FALLBACK_MODELS: ${LLM_FALLBACK_MODELS:-}
+  LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-30}
+  AI_RATE_LIMIT_PER_MINUTE: ${AI_RATE_LIMIT_PER_MINUTE:-10}
+
+# The application containers change nothing on their own file system and
+# need no Linux capabilities.
+x-hardened: &hardened
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  postgres:
+    image: postgres:16.15-alpine
+    environment:
+      # The owner, which runs migrations and the seed; the API connects as
+      # APP_DB_USER, created by infra/postgres/demo on first start.
+      POSTGRES_USER: datapilot
+      POSTGRES_PASSWORD: ${DEMO_POSTGRES_PASSWORD:?run make demo, which writes .env.demo}
+      POSTGRES_DB: datapilot
+      APP_DB_USER: datapilot_app
+      APP_DB_PASSWORD: ${DEMO_APP_DB_PASSWORD:?run make demo, which writes .env.demo}
+    # work_mem: the analytics summary's parallel sort spills to disk at the
+    # default 4 MB.
+    command: ["postgres", "-c", "work_mem=16MB", "-c", "shared_buffers=256MB"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/demo:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datapilot -d datapilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.11-alpine
+    # Bounded memory. Every cache entry and token has a TTL, so volatile-lru
+    # evicts the least recently used of them first; keys without a TTL (the
+    # data version) are never evicted.
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # Runs once per start and exits: migrations, the read-only role's password,
+  # and the small dataset with the demo account when the database is empty.
+  migrate:
+    build: ./backend
+    image: datapilot-demo-backend
+    <<: *hardened
+    command: ["sh", "-c", "flask db upgrade && flask db-roles && flask seed --if-empty --scale small"]
+    environment:
+      <<: *backend-environment
+      DATABASE_URL: postgresql+psycopg://datapilot:${DEMO_POSTGRES_PASSWORD:?}@postgres:5432/datapilot
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    image: datapilot-demo-backend
+    <<: *hardened
+    environment:
+      <<: *backend-environment
+      DATABASE_URL: postgresql+psycopg://datapilot_app:${DEMO_APP_DB_PASSWORD:?}@postgres:5432/datapilot
+      # Nginx, the one proxy in front of the API.
+      TRUSTED_PROXY_HOPS: 1
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-4}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      additional_contexts:
+        nginx: ./infra/nginx
+    image: datapilot-demo-web
+    <<: *hardened
+    ports:
+      # Loopback only: the demo account's password is public.
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:

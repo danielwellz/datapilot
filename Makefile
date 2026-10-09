@@ -13,11 +13,16 @@ seed ?= 42
 # Measured runs per scenario for `make explain` and `make explain-analytics`.
 runs ?= 10
 
+# The production-like stack: its own Compose project, secrets from .env.demo.
+DEMO_COMPOSE := docker compose -f docker-compose.demo.yml --env-file .env --env-file .env.demo
+DEMO_SECRETS := DEMO_SECRET_KEY DEMO_JWT_SECRET_KEY DEMO_POSTGRES_PASSWORD \
+	DEMO_APP_DB_PASSWORD DEMO_READONLY_DB_PASSWORD
+
 .PHONY: help up down logs reset-db \
 	be-install be-dev be-test be-lint be-format be-typecheck \
 	db-migrate db-upgrade db-roles seed explain explain-analytics eval-ask \
 	fe-install fe-dev fe-test fe-lint fe-format fe-build \
-	hooks check demo
+	hooks check demo demo-down demo-reset demo-logs
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -109,5 +114,27 @@ hooks: ## Install the git pre-commit hook
 
 check: be-lint be-typecheck be-test fe-lint fe-test fe-build ## Run every lint, type check and test suite
 
-demo: ## Run the full production-like stack
-	@echo "demo is available from Stage 11 (production readiness)."
+# --- Demo stack -----------------------------------------------------------
+
+# Written once with random values and kept: the database volume remembers the
+# passwords it was created with. Not tracked (.gitignore: .env.*).
+.env.demo:
+	@umask 077 && for name in $(DEMO_SECRETS); do \
+		printf '%s=%s\n' "$$name" "$$(openssl rand -hex 32)"; \
+	done > $@
+	@echo "Wrote random demo secrets to $@."
+
+demo: .env.demo ## Build and run the production-like stack at http://localhost:8080
+	@test -f .env || { echo "Create .env first: cp .env.example .env"; exit 1; }
+	$(DEMO_COMPOSE) up --build --detach --wait
+	@echo "DataPilot is running at http://localhost:8080"
+	@echo "Log in as demo@datapilot.dev with the password DataPilot-demo-2026."
+
+demo-down: ## Stop the demo stack (its data volumes are kept)
+	$(DEMO_COMPOSE) down
+
+demo-reset: ## Stop the demo stack and delete its data volumes
+	$(DEMO_COMPOSE) down --volumes
+
+demo-logs: ## Follow the demo stack's logs
+	$(DEMO_COMPOSE) logs -f
