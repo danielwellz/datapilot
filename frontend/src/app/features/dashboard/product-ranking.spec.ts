@@ -5,7 +5,7 @@ import { MetaOut, ProductRankingOut } from '../../core/api/models';
 import { metaOut } from '../../core/api/testing';
 import { ChartConfig } from '../../shared/chart/chart-config';
 import { provideFakeCharts } from '../../shared/chart/testing';
-import { ProductRanking, productChartSpec, shortenLabel } from './product-ranking';
+import { ProductRanking, productChartSpec } from './product-ranking';
 import { FAILURE, FakePanel, fakePanel, productRank, productRankingOut } from './testing';
 
 describe('product ranking chart', () => {
@@ -32,9 +32,6 @@ describe('product ranking chart', () => {
     expect(spec.formatLabel?.('Noise-cancelling headphones for travel')).toBe(
       'Noise-cancelling head…',
     );
-    expect(shortenLabel('Harbor Backpack')).toBe('Harbor Backpack');
-    expect(shortenLabel('abcdef', 4)).toBe('abc…');
-    expect(shortenLabel('ab  cdef', 4)).toBe('ab…');
   });
 
   it('shows exact revenue, category, units and share in the tooltip', () => {

@@ -2,7 +2,7 @@ import { Component, computed, input, output, signal } from '@angular/core';
 
 import { MetaOut, ProductRankOut, ProductRankingOut } from '../../core/api/models';
 import { ChartView } from '../../shared/chart/chart';
-import { ChartSpec } from '../../shared/chart/chart-config';
+import { ChartSpec, shortenLabel } from '../../shared/chart/chart-config';
 import {
   formatCompactMoney,
   formatCount,
@@ -14,15 +14,8 @@ import { Panel, PanelView, RANKING_DAYS, TOP_PRODUCTS, panelView } from './dashb
 import { PanelError } from './panel-error';
 import { PanelSelect, SelectOption } from './panel-select';
 
-/** Longest product name on the chart's axis; the tooltip and table show it whole. */
-export const AXIS_LABEL_LENGTH = 22;
 const BAR_HEIGHT = 28;
 const AXIS_HEIGHT = 40;
-
-/** `"Noise-cancelling headphones for travel"` becomes `"Noise-cancelling head…"`. */
-export function shortenLabel(label: string, length = AXIS_LABEL_LENGTH): string {
-  return label.length <= length ? label : `${label.slice(0, length - 1).trimEnd()}…`;
-}
 
 export function shareText(share: number | null): string {
   return share === null ? 'none' : formatPercent(share);

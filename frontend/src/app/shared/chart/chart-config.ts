@@ -35,8 +35,16 @@ export interface ChartSpec {
 
 export type ChartConfig = ChartConfiguration<ChartKind, number[], string>;
 
+/** Longest label on a chart's axis; the tooltip and table show it whole. */
+export const AXIS_LABEL_LENGTH = 22;
+
 const TICK_SIZE = 12;
 const TOOLTIP_SIZE = 13;
+
+/** `"Noise-cancelling headphones for travel"` becomes `"Noise-cancelling head…"`. */
+export function shortenLabel(label: string, length = AXIS_LABEL_LENGTH): string {
+  return label.length <= length ? label : `${label.slice(0, length - 1).trimEnd()}…`;
+}
 
 /**
  * Maps a chart spec and the theme's tokens to a Chart.js configuration. Pure,
