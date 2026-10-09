@@ -27,7 +27,7 @@ DEMO_FULL_MIN_FREE_GB := 6
 
 .PHONY: help up down logs reset-db \
 	be-install be-dev be-stop be-test be-lint be-format be-typecheck \
-	db-migrate db-upgrade db-roles seed explain explain-analytics eval-ask \
+	db-migrate db-upgrade db-roles seed explain explain-analytics bench eval-ask \
 	fe-install fe-dev fe-test fe-lint fe-format fe-build \
 	e2e-install e2e e2e-typecheck \
 	hooks check demo demo-full-data demo-down demo-reset demo-logs
@@ -109,6 +109,9 @@ explain: ## EXPLAIN ANALYZE the orders queries on the dev database: make explain
 
 explain-analytics: ## EXPLAIN ANALYZE the analytics queries: make explain-analytics [runs=10]
 	cd $(BACKEND) && uv run python -m scripts.explain_analytics --runs $(runs)
+
+bench: ## Measure the API latencies in the README; the API must be running [args="--skip-uncached"]
+	cd $(BACKEND) && uv run python -m scripts.bench_suite $(args)
 
 eval-ask: ## Ask the golden questions of the enabled models; writes docs/ai-evaluation.md [args="--models a,b"]
 	cd $(BACKEND) && uv run python -m scripts.eval_ask $(args)
