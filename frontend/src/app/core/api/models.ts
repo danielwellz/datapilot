@@ -293,3 +293,115 @@ export interface CohortOut {
 export interface CohortsOut {
   items: CohortOut[];
 }
+
+/**
+ * Ask your data. Every text field written by a model (SQL, explanation,
+ * assumptions) is untrusted and must be shown as plain text, never as HTML.
+ */
+export interface AskIn {
+  question: string;
+  /** An id from `GET /api/ai/models`; the default model when left out. */
+  model?: string;
+}
+
+/** The chart a model suggests for its result. */
+export type AnswerChart = 'none' | 'bar' | 'line';
+
+/** A hint for formatting and charts, from the column's database type. */
+export type ColumnType = 'number' | 'string' | 'boolean' | 'date' | 'datetime' | 'other';
+
+export interface AnsweredByOut {
+  id: string;
+  label: string;
+  provider: string;
+  provider_label: string;
+}
+
+export interface ResultColumnOut {
+  name: string;
+  type: ColumnType;
+}
+
+export interface AskOut {
+  /** The audit id of this question. */
+  id: number;
+  question: string;
+  requested_model: string;
+  /** The model that answered, after any fallback. */
+  model: AnsweredByOut;
+  /** True when another model answered than the one asked. */
+  fell_back: boolean;
+  /** The SQL that ran, after the safety checks rewrote it. */
+  sql: string;
+  explanation: string;
+  chart: AnswerChart;
+  assumptions: string[];
+  columns: ResultColumnOut[];
+  /** Decimals are strings, instants ISO 8601 UTC. */
+  rows: JsonValue[][];
+  row_count: number;
+  /** True when more rows matched than the row limit. */
+  truncated: boolean;
+  /** True when the first query failed and was corrected. */
+  repaired: boolean;
+  latency_ms: number;
+  prompt_version: string;
+  created_at: string;
+}
+
+export interface ModelOut {
+  id: string;
+  label: string;
+  provider: string;
+  provider_label: string;
+  default: boolean;
+}
+
+export interface ModelsOut {
+  /** The models that can answer right now. */
+  items: ModelOut[];
+  default_model: string;
+}
+
+export interface ExampleOut {
+  question: string;
+}
+
+export interface ExamplesOut {
+  items: ExampleOut[];
+}
+
+export interface HistoryQuery {
+  limit?: number;
+  cursor?: string;
+}
+
+export type AiQueryStatus = 'ok' | 'rejected' | 'error';
+
+export interface HistoryItemOut {
+  id: number;
+  question: string;
+  status: AiQueryStatus;
+  error_code: string | null;
+  requested_model: string;
+  /** The model that answered; null when none did. */
+  model: string | null;
+  provider: string | null;
+  /** The SQL that ran, or for a rejected question the SQL that was refused. */
+  sql: string | null;
+  explanation: string | null;
+  chart: AnswerChart | null;
+  assumptions: string[];
+  row_count: number | null;
+  truncated: boolean;
+  repaired: boolean;
+  latency_ms: number;
+  created_at: string;
+}
+
+/** Newest first. */
+export interface HistoryPageOut {
+  items: HistoryItemOut[];
+  /** Pass as `cursor` for the next page; null on the last page. */
+  next_cursor: string | null;
+}
