@@ -2,7 +2,7 @@
   "name": "datapilot-e2e",
   "version": "0.0.0",
   "private": true,
-  "description": "Browser smoke test of the running demo stack (make demo).",
+  "description": "Browser smoke test and README screenshots of the running demo stack (make demo).",
   "scripts": {
     "test": "playwright test",
     "typecheck": "tsc --noEmit"

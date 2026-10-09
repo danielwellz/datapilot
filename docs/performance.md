@@ -5,9 +5,53 @@ DataPilot must stay fast on the full dataset: 2,000,000 orders, 4,478,509 order 
 - **Orders list and detail:** p95 under 150 ms, uncached.
 - **Analytics endpoints:** under 50 ms cached and under 800 ms uncached.
 
-This document records how each was measured, what was changed and why, and the results before and after. The orders endpoints come first; the analytics endpoints follow in [Analytics endpoints](#analytics-endpoints).
+This document records how each was measured, what was changed and why, and the results before and after. [Current numbers](#current-numbers) is the latest run of every endpoint; the orders endpoints' history follows, then the analytics endpoints in [Analytics endpoints](#analytics-endpoints).
 
-## Results
+## Current numbers
+
+`make bench` (`scripts/bench_suite.py`) measures every latency the README reports in one run: it logs in once, takes the data's last day and highest order id from the API, and sends each row's requests one after another over one keep-alive connection, after a warm-up. Uncached analytics rows bump `data_version` before each request, outside the timing, and the script stops unless every timed reply carried the expected `X-Cache` value (`MISS` for uncached rows, `HIT` for cached ones).
+
+Run on 2026-10-09: full dataset (seed 42, history ending 2026-10-07), Gunicorn with 2 workers of 4 threads (`gunicorn.conf.py`), same machine and Docker settings as below.
+
+| Request | p50 | p95 | p99 |
+| --- | ---: | ---: | ---: |
+| `GET /api/orders` (first page, newest first) | 2.9 ms | **4.4 ms** | 5.1 ms |
+| `GET /api/orders?limit=25`, following `next_cursor` page after page | 2.9 ms | **3.5 ms** | 4.5 ms |
+| `GET /api/orders?country=DE&date_from=2026-07-09` | 3.1 ms | **4.9 ms** | 5.7 ms |
+| `GET /api/orders?customer_id=5880` (the busiest customer) | 2.6 ms | **3.7 ms** | 4.8 ms |
+| `GET /api/orders/{id}` (1,000 random ids) | 2.9 ms | **3.3 ms** | 4.9 ms |
+
+| Analytics request | Uncached p50 | **Uncached p95** | **Cached p95** |
+| --- | ---: | ---: | ---: |
+| `/api/analytics/summary` (30 days) | 58.8 ms | **60.6 ms** | **2.5 ms** |
+| `/api/analytics/summary?days=365` | 285.5 ms | **339.4 ms** | **3.2 ms** |
+| `/api/analytics/revenue-monthly` (24 months) | 133.5 ms | **137.2 ms** | **3.4 ms** |
+| `/api/analytics/revenue-monthly?months=36` | 138.7 ms | **153.1 ms** | **2.9 ms** |
+| `/api/analytics/top-customers` (365 days) | 195.4 ms | **242.3 ms** | **3.8 ms** |
+| `/api/analytics/products` (365 days) | 413.3 ms | **479.1 ms** | **3.1 ms** |
+| `/api/analytics/cohorts` (12 months) | 65.3 ms | **69.1 ms** | **2.6 ms** |
+| `/api/analytics/cohorts?months=24` | 239.2 ms | **246.7 ms** | **2.9 ms** |
+| `/api/meta` | 7.3 ms | **9.4 ms** | **2.9 ms** |
+
+Uncached rows are 50 requests after 3 warm-up requests; every other row is 500 requests (1,000 for the detail) after a warm-up. Every row meets its target: orders under 150 ms, analytics under 800 ms uncached and under 50 ms cached.
+
+- **Orders** are two to three times faster than in the Stage 4 measurements below (p95 7.3 to 12.8 ms then). The stack changed in between: threaded Gunicorn workers, and indexes rebuilt after the seed, which also leaves the pages all-visible ([ADR 0004](adr/0004-deterministic-seed-data.md)). The runs were not repeated for each change, so the difference is not attributed to one of them.
+- **Analytics** uncached numbers are within run-to-run variation of the Stage 5 measurements, except the product ranking and the top customers, which vary the most because they read all of `order_items` or a year of orders.
+- **One outlier:** one cached `summary?days=365` request took 5.7 s at the client, while its p99 stayed at 7.7 ms. The server logged no request of that length, and 5,000 further requests to the same endpoint, across worker restarts, had a maximum of 38 ms. It was a stall outside the API and is left out of the conclusions.
+
+The same suite through Nginx on the demo stack loaded with the full dataset (`make demo scale=full`, then `make bench args="--base-url http://localhost:8080 --skip-uncached"`) gave p95 1.9 to 2.6 ms for every orders row and 1.5 to 2.4 ms for every cached analytics row. The demo's PostgreSQL has larger `shared_buffers` and `work_mem`. The uncached rows cannot run there, because the demo's Redis is not published on the host.
+
+To reproduce, with the development services up (`make up`, `make db-upgrade`, `make db-roles`):
+
+```bash
+make seed scale=full
+cd backend && uv run gunicorn --bind 127.0.0.1:5001 "app:create_app()"
+make bench                         # in a second terminal, about 2 minutes
+```
+
+## Orders endpoints
+
+### Results (Stage 4)
 
 API latency, measured by `scripts/bench_api.py`. Each row is 500 sequential requests (1,000 for the detail) after a warm-up, sent over one keep-alive connection to gunicorn with 2 workers.
 
@@ -37,7 +81,7 @@ The cost inside PostgreSQL, from `scripts/explain_orders.py`, is the median `EXP
 
 EXPLAIN ANALYZE times every plan node, which adds overhead when millions of rows flow through a plan. That is why the slow "before" plans take longer here (227 ms) than through the API (178 ms).
 
-## How it was measured
+### How it was measured
 
 - **Machine:** Apple M4 laptop. PostgreSQL 16.15 and Redis 7 run in Docker Desktop with default settings (`shared_buffers=128MB`, `work_mem=4MB`, `jit=on`, 2 parallel workers per gather).
 - **Data:** `make seed scale=full` with seed 42 and history ending 2026-10-07. `ANALYZE` ran during the seed, and autovacuum had processed every table before the first measurement.
@@ -57,7 +101,7 @@ uv run python -m scripts.bench_api --path "/api/orders?limit=25" --follow-cursor
 uv run python -m scripts.bench_api --path "/api/orders/{order_id}" --max-order-id 2000000 -n 1000
 ```
 
-## What changed in the plans
+### What changed in the plans
 
 **Before.** PostgreSQL had only primary keys, so it could not find the newest orders without looking at all of them. Every list query became a parallel sequential scan of all 2 million orders: three processes each read a third of the table, joined every row to its customer, and kept the 26 best rows in a "top-N" sort. Showing 25 orders meant reading 2 million.
 
@@ -67,7 +111,7 @@ uv run python -m scripts.bench_api --path "/api/orders/{order_id}" --max-order-i
 
 **Country and date filters.** The country is a column of `customers`, not `orders`. The plan walks orders newest first in the date range and checks each order's customer. That is fast as long as matching orders are common enough: for DE, the 26 matches were found after 256 orders. PostgreSQL caches customer lookups (`Memoize`), so a repeat customer is read once.
 
-## The indexes and why each one exists
+### The indexes and why each one exists
 
 All three are on `orders`, are built with `CREATE INDEX CONCURRENTLY` (writes are not blocked during the build), and end with `id`. The `id` makes every position unique, which keyset pagination needs (see [ADR 0005](adr/0005-keyset-pagination.md)): a cursor holds the last row's sort value and id, and the next page is a seek into the index to "just after that pair".
 
@@ -81,7 +125,7 @@ The indexes are ascending. A B-tree is read backwards as efficiently as forwards
 
 Build times are from the first, hand-run builds on the full dataset; the migration that creates all three took 2.6 s. The cost is about 200 MB of disk and a little extra work on every insert into `orders`. That trade suits an analytics store, which reads far more than it writes.
 
-## Indexes considered and left out
+### Indexes considered and left out
 
 Each one was built on the full dataset, measured, and dropped again:
 
@@ -90,7 +134,7 @@ Each one was built on the full dataset, measured, and dropped again:
 - **A partial index on paid orders** was left to the analytics queries, where a plan could prove it was needed. One did: see [Cohorts](#cohorts-a-partial-index-for-an-index-only-join).
 - **`order_items (product_id)`** was not used by any orders endpoint. The detail reads items through the primary key `(order_id, product_id)`.
 
-## Keyset compared with OFFSET at depth
+### Keyset compared with OFFSET at depth
 
 Both scenarios return the same 26 rows, those after row 1,000,000:
 
@@ -101,7 +145,7 @@ Both scenarios return the same 26 rows, those after row 1,000,000:
 
 With OFFSET, PostgreSQL still has to produce the first 1,000,000 rows and throw them away. With the index it walks them instead of sorting them, but it also joins each of them to its customer: 159,606 buffer reads to return 26 rows. Its cost grows with the page number. The keyset query seeks straight to the position the cursor names, reads 82 buffers, and costs the same on page 1 as on page 40,000. The API therefore offers only cursor pagination.
 
-## Worst cases
+### Worst cases
 
 The list is fast when the plan finds a page of matches quickly. The risk is a combination of filters so rare that walking the date index finds few or no matches and reads far into the table. These combinations were measured through the API after the indexes, 3 requests each:
 
@@ -118,9 +162,9 @@ For a selective `min_total`, the planner switches to a range read on `(total, id
 
 1. An index that matches the filter, such as `(status, created_at, id)`.
 2. Copying the customer's country onto `orders`, as an expand/contract migration.
-3. A statement timeout on the list query.
+3. A statement timeout on the list query. Since Stage 11, every statement an API request runs is cancelled after 3 seconds (`API_STATEMENT_TIMEOUT_MS`), with `503 statement_timeout`, as a backstop.
 
-## Query counts
+### Query counts
 
 The list runs **2 queries** per request whatever the page size: the token's user, then the page of orders joined to their customers. The detail runs **3**: the user, the order joined to its customer, and the items joined to their products. Integration tests assert these counts at page sizes 1 and 100, and for orders with 1 and 10 items, using a fixture that records every statement sent to PostgreSQL. Model relationships use `lazy="raise"`, so an accidental lazy load fails a test instead of adding a query per row.
 
@@ -128,7 +172,7 @@ The list runs **2 queries** per request whatever the page size: the token's user
 
 The five analytics endpoints and `/api/meta` are answered through a Redis cache-aside layer ([ADR 0006](adr/0006-analytics-sql-and-caching.md)). A cached request reads one entry from Redis. An uncached request runs one analytics query, which aggregates hundreds of thousands to millions of rows. Both kinds are measured below.
 
-### Results
+### Results (Stage 5)
 
 API latency from `scripts/bench_api.py` against gunicorn with 2 workers, sequential requests over one keep-alive connection:
 
@@ -254,7 +298,11 @@ An index-only scan reads the table after all for any page that the visibility ma
 
 Autovacuum's insert-triggered vacuum ran about 1.5 minutes after the seed finished. Even before it, every query stays under the 800 ms target. The cache also means a cold query is paid once per entry, not once per request.
 
+Since Stage 11, the seed writes its rows with `COPY ... FREEZE` into the tables it truncated, so about 97% of the pages are all-visible straight after the load ([ADR 0004](adr/0004-deterministic-seed-data.md)), and the index-only scan works without waiting for autovacuum. The measurements above were taken before that change.
+
 ### Reproduce
+
+`make bench` runs every row of the results table (see [Current numbers](#current-numbers)). One endpoint at a time:
 
 ```bash
 make explain-analytics                      # EXPLAIN scenarios on the dev database

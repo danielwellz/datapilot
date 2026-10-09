@@ -21,9 +21,12 @@ jobs:
       run:
         working-directory: backend
 
+    # Docker Official Images from Amazon ECR Public, which mirrors them with
+    # the same digests: Docker Hub limits anonymous pulls per address, and
+    # shared runners use that allowance up.
     services:
       postgres:
-        image: postgres:16-alpine
+        image: public.ecr.aws/docker/library/postgres:16-alpine
         env:
           POSTGRES_USER: datapilot
           POSTGRES_PASSWORD: datapilot
@@ -37,7 +40,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       redis:
-        image: redis:7-alpine
+        image: public.ecr.aws/docker/library/redis:7-alpine
         ports:
           - 6379:6379
         options: >-

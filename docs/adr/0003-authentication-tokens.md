@@ -75,3 +75,8 @@ The options considered were:
 - **Client addresses** come from `request.remote_addr`. Behind the Stage 11 reverse proxy every request would appear to come from the proxy, so `ProxyFix` with the exact number of trusted hops must be configured there, or all clients would share one limit.
 - **Sessions slide.** Each rotation issues a fresh 7-day token, so a session that refreshes at least once a week never ends on its own. An absolute limit (for example 30 days from login, carried with the family) can be added later without changing the token format for clients.
 - **Logging out does not end other sessions.** A "log out everywhere" action would need a per-user revocation marker. It is not required yet.
+
+## Later changes
+
+- **2026-10-09 (Stage 11):** an unreachable Redis or PostgreSQL now gives `503 service_unavailable`, and the log names the dependency. Login, registration, refresh and logout still fail closed.
+- **2026-10-09 (Stage 11):** `TRUSTED_PROXY_HOPS` configures Werkzeug's `ProxyFix`. The demo stack trusts exactly one hop, Nginx, so each client has its own login limit and a forged `X-Forwarded-For` is ignored ([ADR 0008](0008-production-images-and-demo-stack.md)).

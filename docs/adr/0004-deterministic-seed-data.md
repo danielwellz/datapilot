@@ -63,3 +63,8 @@ The full seed meets the 4-minute target, so the loader keeps its foreign keys du
 - **The data looks current only on the day it is seeded.** Re-seeding moves the history forward, and `data_version` invalidates caches.
 - **`flask seed` replaces all sales data.** It is meant for development, CI and the demo stack, not for a database holding real orders.
 - **Weekday and seasonal effects use UTC days.** Customers in different time zones all shop on UTC days, which is a simplification the analytics do not depend on.
+
+## Later changes
+
+- **2026-10-09 (Stage 11):** the loader copies with `COPY ... WITH (FREEZE)`, which is allowed because the tables are truncated in the same transaction, and rebuilds every sales table's indexes with `REINDEX` after the load. About 97% of pages are all-visible straight after the seed, so index-only scans work before autovacuum runs, and the orders indexes shrank from 369 to 298 MB. The full seed takes 102 s instead of 85 to 93 s.
+- **2026-10-09 (Stage 11):** `flask seed --if-empty` loads only into a database without orders, and with `APP_ENV=production` replacing existing data needs `--yes`. The demo stack's start-up job uses the first; `make demo scale=full` uses the second to load the full dataset into the demo.

@@ -18,13 +18,21 @@ runs ?= 10
 DEMO_COMPOSE := docker compose -f docker-compose.demo.yml --env-file .env --env-file .env.demo
 DEMO_SECRETS := DEMO_SECRET_KEY DEMO_JWT_SECRET_KEY DEMO_POSTGRES_PASSWORD \
 	DEMO_APP_DB_PASSWORD DEMO_READONLY_DB_PASSWORD
+# `make demo scale=full`: the full dataset's order count (SCALES in
+# app/seed/generator.py), and the free space Docker's disk must have before
+# loading it. The load peaked at 2.3 GB: about 0.9 GB of tables and indexes
+# plus the write-ahead log it writes before checkpoints recycle it.
+FULL_SCALE_ORDERS := 2000000
+DEMO_FULL_MIN_FREE_GB := 6
+# `make demo-pull`: tries per image, waiting 10, 20, 30… seconds between them.
+DEMO_PULL_ATTEMPTS := 5
 
 .PHONY: help up down logs reset-db \
 	be-install be-dev be-stop be-test be-lint be-format be-typecheck \
-	db-migrate db-upgrade db-roles seed explain explain-analytics eval-ask \
+	db-migrate db-upgrade db-roles seed explain explain-analytics bench eval-ask \
 	fe-install fe-dev fe-test fe-lint fe-format fe-build \
-	e2e-install e2e e2e-typecheck \
-	hooks check demo demo-down demo-reset demo-logs
+	e2e-install e2e e2e-typecheck screenshots \
+	hooks check demo demo-pull demo-full-data demo-down demo-reset demo-logs
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -104,6 +112,9 @@ explain: ## EXPLAIN ANALYZE the orders queries on the dev database: make explain
 explain-analytics: ## EXPLAIN ANALYZE the analytics queries: make explain-analytics [runs=10]
 	cd $(BACKEND) && uv run python -m scripts.explain_analytics --runs $(runs)
 
+bench: ## Measure the API latencies in the README; the API must be running [args="--skip-uncached"]
+	cd $(BACKEND) && uv run python -m scripts.bench_suite $(args)
+
 eval-ask: ## Ask the golden questions of the enabled models; writes docs/ai-evaluation.md [args="--models a,b"]
 	cd $(BACKEND) && uv run python -m scripts.eval_ask $(args)
 
@@ -135,7 +146,10 @@ e2e-install: ## Install the smoke test's dependencies and its Chromium
 e2e: ## Run the browser smoke test against the running demo stack (make demo)
 	cd $(E2E) && npx playwright test
 
-e2e-typecheck: ## Type-check the smoke test
+screenshots: ## Capture docs/images in both themes from the running demo stack [model="GPT-OSS 120B (Groq)"]
+	cd $(E2E) && SCREENSHOT_MODEL="$(model)" npx playwright test --config screenshots.config.ts
+
+e2e-typecheck: ## Type-check the smoke test and the screenshot script
 	cd $(E2E) && npx tsc --noEmit
 
 # --- Workflow -------------------------------------------------------------
@@ -155,11 +169,68 @@ check: be-lint be-typecheck be-test fe-lint fe-test fe-build e2e-typecheck ## Ru
 	done > $@
 	@echo "Wrote random demo secrets to $@."
 
-demo: .env.demo ## Build and run the production-like stack at http://localhost:8080
+demo: .env.demo ## Build and run the production-like stack at http://localhost:8080 [scale=full]
 	@test -f .env || { echo "Create .env first: cp .env.example .env"; exit 1; }
+	@$(MAKE) --no-print-directory demo-pull
+	@case "$(scale)" in \
+		small) ;; \
+		full) $(MAKE) --no-print-directory demo-full-data ;; \
+		*) echo "scale must be small or full, not $(scale)." >&2; exit 1 ;; \
+	esac
 	$(DEMO_COMPOSE) up --build --detach --wait
 	@echo "DataPilot is running at http://localhost:8080"
 	@echo "Log in as demo@datapilot.dev with the password DataPilot-demo-2026."
+
+# Registries throttle anonymous pulls per address (Docker Hub per hour, ECR
+# Public per second), and CI runners share addresses. Compose and BuildKit
+# pull the stack's images all at once and give up on the first refusal, so
+# this pulls each missing image one at a time and retries with a growing
+# wait. Images already present are not looked up again: Compose and the
+# build then use the local copies without asking the registry.
+demo-pull: .env.demo
+	@images=$$( { $(DEMO_COMPOSE) config --images; \
+		awk '/^FROM / { print $$2 }' $(BACKEND)/Dockerfile $(FRONTEND)/Dockerfile; } \
+		| grep / | sort -u ); \
+	for image in $$images; do \
+		docker image inspect "$$image" > /dev/null 2>&1 && continue; \
+		attempt=1; \
+		until docker pull --quiet "$$image"; do \
+			if [ "$$attempt" -ge $(DEMO_PULL_ATTEMPTS) ]; then \
+				echo "Could not pull $$image after $$attempt attempts." >&2; \
+				exit 1; \
+			fi; \
+			echo "Pulling $$image failed; retrying in $$((attempt * 10)) s." >&2; \
+			sleep $$((attempt * 10)); \
+			attempt=$$((attempt + 1)); \
+		done; \
+	done
+
+# Loads the full dataset before the API starts: the seed truncates the sales
+# tables in one transaction, so a running API would wait on its locks and
+# answer 503 for the whole load. Skipped when the data is already there; the
+# migrate job's `seed --if-empty` then leaves it alone on every start.
+demo-full-data: .env.demo
+	$(DEMO_COMPOSE) build
+	$(DEMO_COMPOSE) up --detach --wait postgres redis
+	@# Before the first migration there is no orders table: count it as empty.
+	@orders=$$($(DEMO_COMPOSE) exec -T postgres \
+		psql -U datapilot -d datapilot -tAc 'SELECT count(*) FROM orders' 2>/dev/null || echo 0); \
+	if [ "$$orders" -ge $(FULL_SCALE_ORDERS) ]; then \
+		echo "The demo stack already holds the full dataset ($$orders orders)."; \
+		exit 0; \
+	fi; \
+	free_kb=$$($(DEMO_COMPOSE) exec -T postgres df -Pk /var/lib/postgresql/data | awk 'NR == 2 { print $$4 }'); \
+	free_gb=$$((free_kb / 1024 / 1024)); \
+	if [ "$$free_gb" -lt $(DEMO_FULL_MIN_FREE_GB) ]; then \
+		echo "Docker's disk has $$free_gb GB free; the full dataset needs at least $(DEMO_FULL_MIN_FREE_GB) GB." >&2; \
+		echo "Free space (for example docker builder prune) or run make demo for the small dataset." >&2; \
+		exit 1; \
+	fi; \
+	echo "Loading the full dataset (2,000,000 orders) into the demo stack. It replaces the"; \
+	echo "demo's sales data and takes about 2 minutes and 2 GB of Docker disk ($$free_gb GB free)."; \
+	$(DEMO_COMPOSE) stop backend web; \
+	$(DEMO_COMPOSE) run --rm migrate \
+		sh -c "flask db upgrade && flask db-roles && flask seed --scale full --yes"
 
 demo-down: ## Stop the demo stack (its data volumes are kept)
 	$(DEMO_COMPOSE) down

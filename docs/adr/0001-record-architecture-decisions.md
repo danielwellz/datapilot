@@ -15,6 +15,7 @@ We record every significant architecture decision as an Architecture Decision Re
 - Each ADR has a status (Proposed, Accepted, Superseded by ADR N, Deprecated), a date, and three sections: Context, Decision and Consequences.
 - An ADR is written in the same pull request as the change it describes.
 - Accepted ADRs are not rewritten. A changed decision gets a new ADR that supersedes the old one, and the old one's status is updated to point to it.
+- When later work settles a follow-up an ADR names, or changes a fact it measured, without changing the decision, a dated "Later changes" section at the end records it. The original text stays as it was written.
 
 A decision is significant when it is hard to reverse, affects several parts of the system, or involves a trade-off a reviewer might question.
 

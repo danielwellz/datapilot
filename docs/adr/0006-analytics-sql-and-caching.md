@@ -76,3 +76,9 @@ Three queries were slower than they needed to be. Each fix was measured before a
 - **Key space.** A client can enumerate parameter combinations (365 day counts × 21 countries × 100 limits) and fill Redis with entries for 10 minutes each. Only authenticated users can do this. Stage 11 should set Redis `maxmemory` with `volatile-lru`, so cache entries are evicted before anything else.
 - **The paid orders index costs 57 MB, and work on every insert of a paid order.** It is read as an index-only scan only after vacuum has marked the table's pages all-visible. Right after a seed, cohorts at 24 months take about 750 ms until autovacuum runs.
 - **Matching expressions.** The month statistics apply only to the identical expression. A test pins the statistics object and the expression in `revenue_monthly.sql`, so a rewrite of that expression fails the test instead of silently slowing the query.
+
+## Later changes
+
+- **2026-10-09 (Stage 11):** login now fails closed with `503 service_unavailable` instead of a 500 when Redis is down. The cache still fails open with `X-Cache: BYPASS`.
+- **2026-10-09 (Stage 11):** Redis runs with `maxmemory 256mb` and `volatile-lru` in development and in the demo stack.
+- **2026-10-09 (Stage 11):** the seed writes frozen, all-visible pages (ADR 0004), so the cohorts query reads the paid orders index alone right after a seed instead of waiting for autovacuum.

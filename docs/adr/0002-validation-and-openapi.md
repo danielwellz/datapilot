@@ -41,3 +41,7 @@ Use spectree (`spectree[flask]`, pinned through `uv.lock`) for request validatio
 - `spec.spec` is generated on first use and cached for the life of the process. That is correct for a server, whose routes are fixed at startup, but tests that compare documents across differently configured apps must clear the cache.
 - The Swagger UI page loads `swagger-ui-dist` 5.11.0 from unpkg. That is acceptable for development. The production Content Security Policy (Stage 11) must allow it, or serve the assets locally, or disable `/api/docs` in production.
 - spectree 3.0 is a new major version. If it proves unstable, the fallback is the custom decorator described above. Views depend only on `@spec.validate` and on receiving Pydantic models as arguments, so the swap stays inside `app/api/`.
+
+## Later changes
+
+- **2026-10-09 (Stage 11):** the Swagger UI page now has its own Content-Security-Policy, which allows the pinned `swagger-ui-dist` path on unpkg and the page's one inline script by hash; every other API response forbids scripts entirely ([ADR 0008](0008-production-images-and-demo-stack.md)). Serving the assets locally remains possible later.
