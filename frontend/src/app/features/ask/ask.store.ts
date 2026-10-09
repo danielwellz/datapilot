@@ -339,11 +339,12 @@ export class AskStore {
 
   /**
    * Adds the questions recorded since the history was loaded, keeping the
-   * older pages already shown. A failure leaves the list as it is: the
-   * question's own receipt has already told the user what happened.
+   * older pages already shown, even while another one loads. A failure
+   * leaves the list as it is: the question's own receipt has already told
+   * the user what happened.
    */
   private refreshHistory(): void {
-    if (this.state().historyStatus !== 'loaded') {
+    if (this.state().history.length === 0) {
       this.loadHistory();
       return;
     }

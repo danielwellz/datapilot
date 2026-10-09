@@ -491,6 +491,20 @@ describe('AskStore', () => {
       expect(store.history().map((item) => item.id)).toEqual([121]);
     });
 
+    it('keeps loading older questions when a new one is recorded meanwhile', () => {
+      loadAll(historyPageOut([historyItemOut({ id: 120 })], 'c1'));
+      store.loadMoreHistory();
+      const older = expectHistory();
+
+      store.ask(QUESTION);
+      expectAsk().flush(askOut({ id: 124 }));
+      expectHistory().flush(historyPageOut([historyItemOut({ id: 124 })], 'c2'));
+      older.flush(historyPageOut([historyItemOut({ id: 110 })]));
+
+      expect(store.history().map((item) => item.id)).toEqual([124, 120, 110]);
+      expect(store.historyStatus()).toBe('loaded');
+    });
+
     it('loads the first page on a refresh when it had failed', () => {
       store.load();
       http.expectOne(`${AI_URL}/models`).flush(modelsOut());

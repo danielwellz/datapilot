@@ -78,6 +78,11 @@ describe('AskPage', () => {
 
     await ask('Two rows?', 2);
     expect(status()?.trim()).toBe('Answered: 2 rows.');
+
+    store.recall(historyItemOut({ id: 1, question: 'One row?' }));
+    await fixture.whenStable();
+    expect(element.querySelector('.ask__thread h2')?.textContent.trim()).toBe('One row?');
+    expect(status()?.trim()).toBe('Answered: 2 rows.');
   });
 
   it('shows a chosen history item at the top of the thread and moves focus to it', async () => {

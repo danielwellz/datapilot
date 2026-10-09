@@ -1,6 +1,6 @@
 import { Component, ElementRef, Injector, afterNextRender, computed, inject } from '@angular/core';
 
-import { HistoryItemOut } from '../../core/api/models';
+import { AskOut, HistoryItemOut } from '../../core/api/models';
 
 import { formatCount } from '../../shared/format/format';
 import { AskComposer } from './ask-composer';
@@ -29,11 +29,20 @@ export class AskPage {
    * themselves on their receipt, and a pending question says it is asking.
    */
   protected readonly announcement = computed(() => {
-    const newest = this.store.entries().at(0);
-    if (newest?.state.kind !== 'answered') {
+    // The most recently asked answer, not the top of the thread: recalling
+    // an older receipt moves it up but must not announce it again.
+    let latest: AskOut | null = null;
+    let latestKey = 0;
+    for (const entry of this.store.entries()) {
+      if (entry.state.kind === 'answered' && entry.key > latestKey) {
+        latest = entry.state.answer;
+        latestKey = entry.key;
+      }
+    }
+    if (latest === null) {
       return '';
     }
-    const { row_count: rows } = newest.state.answer;
+    const rows = latest.row_count;
     return `Answered: ${formatCount(rows)} ${rows === 1 ? 'row' : 'rows'}.`;
   });
 
