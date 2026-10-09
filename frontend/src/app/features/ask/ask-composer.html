@@ -1,0 +1,96 @@
+<form class="composer" novalidate [formGroup]="form" (ngSubmit)="submit()">
+  <div class="field">
+    <label class="field__label" for="ask-question">Your question</label>
+    <textarea
+      id="ask-question"
+      class="input composer__question"
+      rows="3"
+      formControlName="question"
+      placeholder="For example: which product categories sold the most units last quarter?"
+      [attr.aria-describedby]="
+        error() === null ? 'ask-question-hint' : 'ask-question-error ask-question-hint'
+      "
+      [attr.aria-invalid]="error() !== null"
+      (keydown)="onKeydown($event)"
+    ></textarea>
+    <div class="composer__under">
+      <p id="ask-question-hint" class="field__hint">
+        Enter asks; Shift+Enter starts a new line. The answer comes with the SQL that ran.
+      </p>
+      @if (showCounter()) {
+        <p class="field__hint composer__counter" [class.field__error]="length() > maxLength">
+          {{ length() }} of {{ maxLength }} characters
+        </p>
+      }
+    </div>
+    @if (error(); as error) {
+      <p id="ask-question-error" class="field__error">{{ error }}</p>
+    }
+  </div>
+
+  <div class="composer__actions">
+    <div class="field composer__model">
+      <label class="field__label" for="ask-model">Model</label>
+      @switch (store.modelsStatus()) {
+        @case ('failed') {
+          <p class="field__hint">
+            The list of models couldn't be loaded, so questions go to the default model.
+            <button
+              class="button button--quiet composer__retry"
+              type="button"
+              (click)="store.load()"
+            >
+              Try again
+            </button>
+          </p>
+        }
+        @default {
+          <select
+            id="ask-model"
+            class="input"
+            [disabled]="store.modelsStatus() !== 'loaded'"
+            (change)="selectModel($event)"
+          >
+            @if (store.modelsStatus() !== 'loaded') {
+              <option>Loading models…</option>
+            }
+            @for (model of store.models(); track model.id) {
+              <option [value]="model.id" [selected]="model.id === store.selectedModelId()">
+                {{ model.label }}
+              </option>
+            }
+          </select>
+        }
+      }
+    </div>
+    <button
+      class="button button--primary composer__submit"
+      type="submit"
+      [disabled]="!store.canAsk()"
+    >
+      {{ submitLabel() }}
+    </button>
+  </div>
+
+  @if (store.examples().length > 0) {
+    <div class="composer__examples" role="group" aria-labelledby="ask-examples-label">
+      <p id="ask-examples-label" class="field__label">Example questions</p>
+      <ul class="composer__chips">
+        @for (example of store.examples(); track example) {
+          <li>
+            <button
+              class="composer__chip"
+              type="button"
+              [disabled]="!store.canAsk()"
+              (click)="askExample(example)"
+            >
+              {{ example }}
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  } @else if (store.examplesStatus() === 'failed') {
+    <p class="field__hint">The example questions couldn't be loaded.</p>
+  }
+</form>

@@ -1,0 +1,24 @@
+.ask {
+  display: grid;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.ask__main {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.ask__empty {
+  color: var(--color-graphite);
+}
+
+// The receipts' perforated edges separate them; the list adds only space.
+.ask__thread {
+  display: grid;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

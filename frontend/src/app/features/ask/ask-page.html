@@ -1,0 +1,33 @@
+<section class="page" aria-labelledby="ask-title">
+  <header class="page__header">
+    <h1 id="ask-title">Ask your data</h1>
+    <p class="page__lead">
+      A question in plain English, answered with the SQL that ran and its results.
+    </p>
+  </header>
+
+  <div class="ask">
+    <div class="ask__main">
+      <div class="sheet">
+        <dp-ask-composer />
+      </div>
+
+      <p class="visually-hidden" role="status">{{ announcement() }}</p>
+
+      @if (store.entries().length === 0) {
+        <p class="ask__empty">
+          No questions yet in this session. Ask one above or pick an example; each answer arrives as
+          a receipt with the SQL that ran and its rows.
+        </p>
+      } @else {
+        <ol class="ask__thread" aria-label="Questions in this session, newest first">
+          @for (entry of store.entries(); track entry.key) {
+            <li [attr.data-entry]="entry.key">
+              <dp-query-receipt [entry]="entry" />
+            </li>
+          }
+        </ol>
+      }
+    </div>
+  </div>
+</section>
