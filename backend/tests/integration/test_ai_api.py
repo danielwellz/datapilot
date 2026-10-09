@@ -212,6 +212,7 @@ def test_ask_reports_provider_rate_limits_with_retry_after(
     assert _error(response)["code"] == "llm_rate_limited"
 
 
+@pytest.mark.usefixtures("pinned_rate_limit_clock")
 def test_ask_enforces_the_per_user_rate_limit(make_app: AppFactory, user: User) -> None:
     app = make_app(ai_rate_limit_per_minute=1)
     client = app.test_client()
@@ -222,7 +223,7 @@ def test_ask_enforces_the_per_user_rate_limit(make_app: AppFactory, user: User) 
 
     assert response.status_code == 429
     assert _error(response)["code"] == "rate_limited"
-    assert int(response.headers["Retry-After"]) >= 1
+    assert response.headers["Retry-After"] == "60"
 
 
 def test_history_pages_through_the_users_questions_newest_first(
