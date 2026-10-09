@@ -286,4 +286,22 @@ describe('OrderFilterBar', () => {
     expect(bar.querySelector('#filter-country-error')).toBeNull();
     expect(select('#filter-country').options).toHaveLength(4);
   });
+
+  it('folds the fields behind a button that says how many filters apply', () => {
+    render({ ...NO_FILTERS, statuses: ['paid', 'refunded'], minTotal: '10', maxTotal: '20' });
+    const toggle = element('.filters__toggle');
+
+    expect(toggle.textContent.replace(/\s+/g, ' ').trim()).toBe('Filters (2 applied)');
+    expect(toggle.getAttribute('aria-controls')).toBe('order-filter-fields');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(element('#order-filter-fields').classList).not.toContain('filters__fields--open');
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(element('#order-filter-fields').classList).toContain('filters__fields--open');
+
+    showFilters(NO_FILTERS);
+    expect(toggle.textContent.trim()).toBe('Filters');
+  });
 });

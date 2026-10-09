@@ -146,6 +146,21 @@ export function hasFilters(filters: OrderFilters): boolean {
   return !sameFilters({ ...filters, sort: DEFAULT_SORT }, NO_FILTERS);
 }
 
+/**
+ * How many kinds of filter are set; a range counts once and so do the
+ * statuses, as each is one control group on the filter bar.
+ */
+export function activeFilterCount(filters: OrderFilters): number {
+  return [
+    filters.statuses.length > 0,
+    filters.country !== null,
+    filters.channel !== null,
+    filters.customerId !== null,
+    filters.dateFrom !== null || filters.dateTo !== null,
+    filters.minTotal !== null || filters.maxTotal !== null,
+  ].filter(Boolean).length;
+}
+
 /** Orders two totals that match {@link TOTAL_PATTERN}, without passing through a float. */
 export function compareTotals(a: string, b: string): number {
   return toCents(a) - toCents(b);

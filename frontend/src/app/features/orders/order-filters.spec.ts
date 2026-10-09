@@ -2,6 +2,7 @@ import { Params, convertToParamMap } from '@angular/router';
 
 import {
   NO_FILTERS,
+  activeFilterCount,
   OrderFilters,
   compareTotals,
   filtersFromParams,
@@ -147,6 +148,15 @@ describe('order filters', () => {
       expect(hasFilters({ ...NO_FILTERS, sort: 'total' })).toBe(false);
       expect(hasFilters({ ...NO_FILTERS, customerId: 7 })).toBe(true);
     });
+  });
+
+  it('counts each control group once', () => {
+    expect(activeFilterCount(NO_FILTERS)).toBe(0);
+    expect(activeFilterCount({ ...NO_FILTERS, sort: 'total' })).toBe(0);
+    expect(activeFilterCount(EVERYTHING)).toBe(6);
+    expect(
+      activeFilterCount({ ...NO_FILTERS, statuses: ['paid', 'refunded'], dateTo: '2026-01-01' }),
+    ).toBe(2);
   });
 
   it('compares totals by value', () => {

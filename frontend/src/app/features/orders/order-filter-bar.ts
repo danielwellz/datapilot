@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, input, output, untracked } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  untracked,
+} from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -24,6 +33,7 @@ import {
   NO_FILTERS,
   OrderFilters,
   TOTAL_PATTERN,
+  activeFilterCount,
   compareTotals,
   hasFilters,
   sameFilters,
@@ -144,6 +154,9 @@ export class OrderFilterBar {
   protected readonly lastDay = computed(() => this.loadedMeta()?.last_order_date ?? null);
   protected readonly customerId = computed(() => this.filters().customerId);
   protected readonly filtered = computed(() => hasFilters(this.filters()));
+  protected readonly activeCount = computed(() => activeFilterCount(this.filters()));
+  /** On narrow screens the fields fold away behind a button, so the orders stay in view. */
+  protected readonly expanded = signal(false);
 
   constructor() {
     // The URL may change from outside (Back, a shared link, "Clear filters"),
@@ -180,6 +193,10 @@ export class OrderFilterBar {
   protected apply(): void {
     this.form.markAllAsTouched();
     this.emitIfChanged();
+  }
+
+  protected toggle(): void {
+    this.expanded.update((expanded) => !expanded);
   }
 
   protected clear(): void {
