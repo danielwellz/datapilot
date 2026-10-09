@@ -1,18 +1,22 @@
 """AskService end to end over the real database, with scripted or fake models."""
 
+import json
 from typing import Any
 
+import httpx2
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session, scoped_session
 
 from app.ai.clients.base import (
     InvalidModelOutputError,
+    LLMClient,
     LLMResult,
     ProviderError,
     ProviderFailure,
     TokenUsage,
 )
+from app.ai.clients.openai_compatible import OpenAICompatibleClient
 from app.ai.errors import (
     LlmInvalidOutput,
     LlmRateLimited,
@@ -25,6 +29,7 @@ from app.ai.errors import (
 )
 from app.ai.examples import EXAMPLE_QUESTIONS
 from app.ai.prompt import PROMPT_VERSION
+from app.ai.registry import ModelRegistry
 from app.ai.sql_guard import GuardedSql
 from app.errors import AppError, RateLimited
 from app.models import AiQuery, OrderStatus
@@ -286,6 +291,73 @@ def test_a_provider_failure_falls_back_to_the_next_model(
     )
     logged = _logged(captured_logs, "model provider failed")
     assert (logged["model"], logged["failure"]) == ("alpha-1", failure.value)
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_a_refused_key_falls_back_to_a_model_on_another_provider(
+    make_service: MakeService,
+    registry: ModelRegistry,
+    db_session: scoped_session[Session],
+    captured_logs: LogCapture,
+    status: int,
+) -> None:
+    # The real client over a mock transport, so the provider's status code
+    # itself drives the fallback (a refused key, or a region the provider blocks).
+    hosts: list[str] = []
+
+    def provider(request: httpx2.Request) -> httpx2.Response:
+        hosts.append(request.url.host)
+        if request.url.host == "alpha.example":
+            return httpx2.Response(status, json={"error": {"message": "Access denied"}})
+        content = json.dumps(
+            {"sql": SERIES_SQL, "explanation": "Five numbers.", "chart": "none", "assumptions": []}
+        )
+        return httpx2.Response(
+            200,
+            json={
+                "id": "chatcmpl-1",
+                "object": "chat.completion",
+                "created": 1,
+                "model": "b1",
+                "choices": [
+                    {
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "message": {"role": "assistant", "content": content},
+                    }
+                ],
+                "usage": {"prompt_tokens": 120, "completion_tokens": 30, "total_tokens": 150},
+            },
+        )
+
+    def real_client(model_id: str) -> LLMClient:
+        return OpenAICompatibleClient(
+            registry.resolve(model_id),
+            timeout_seconds=5,
+            max_output_tokens=1024,
+            http_client=httpx2.Client(transport=httpx2.MockTransport(provider)),
+        )
+
+    service, _ = make_service({"alpha-1": real_client("alpha-1"), "beta-1": real_client("beta-1")})
+
+    result = service.ask(create_user().id, "Count to five", None)
+
+    # A refused key is not retried on the same provider.
+    assert hosts == ["alpha.example", "beta.example"]
+    assert (result.requested_model, result.model.id, result.model.provider_id) == (
+        "alpha-1",
+        "beta-1",
+        "beta",
+    )
+    assert result.result.rows == [[1], [2], [3], [4], [5]]
+    audit = _audit(db_session)
+    assert (audit.model, audit.provider, audit.status) == ("beta-1", "beta", "ok")
+    logged = _logged(captured_logs, "model provider failed")
+    assert (logged["model"], logged["provider"], logged["failure"]) == (
+        "alpha-1",
+        "alpha",
+        "authentication",
+    )
 
 
 def test_every_provider_rate_limited_says_when_to_retry(

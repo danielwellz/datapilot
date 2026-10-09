@@ -254,3 +254,40 @@ def test_a_request_that_fails_after_starting_a_session_sets_no_cookie(
 
     assert response.status_code == 500
     assert "Set-Cookie" not in response.headers
+
+
+PROXY_IP = "10.0.0.2"
+
+
+def _login_via_proxy(client: FlaskClient, forwarded_for: str, email: str = EMAIL) -> Any:
+    return client.post(
+        URL,
+        json={"email": email, "password": DEFAULT_PASSWORD},
+        environ_base={"REMOTE_ADDR": PROXY_IP},
+        headers={"X-Forwarded-For": forwarded_for},
+    )
+
+
+@pytest.mark.usefixtures("user", "pinned_rate_limit_clock")
+def test_behind_a_trusted_proxy_each_client_address_has_its_own_limit(
+    make_app: AppFactory,
+) -> None:
+    client = make_app(trusted_proxy_hops=1).test_client()
+    for n in range(30):
+        # A client may prepend addresses of its own; only the proxy's hop counts.
+        response = _login_via_proxy(client, f"192.0.2.9, {CLIENT_IP}", f"user{n}@datapilot.dev")
+        assert response.status_code == 401
+
+    assert _login_via_proxy(client, CLIENT_IP).status_code == 429
+    assert _login_via_proxy(client, "198.51.100.2").status_code == 200
+
+
+@pytest.mark.usefixtures("user", "pinned_rate_limit_clock")
+def test_without_trusted_proxies_a_forged_forwarded_address_is_ignored(
+    client: FlaskClient,
+) -> None:
+    for n in range(30):
+        response = _login_via_proxy(client, f"198.51.100.{n}", f"user{n}@datapilot.dev")
+        assert response.status_code == 401
+
+    assert _login_via_proxy(client, "198.51.100.200").status_code == 429

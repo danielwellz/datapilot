@@ -1,6 +1,7 @@
 """DataPilot backend application package."""
 
 from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Imported for its side effect: every model registers its table on the shared
 # metadata, which Alembic autogenerate compares against the database.
@@ -29,6 +30,11 @@ def create_app(settings: Settings | None = None) -> Flask:
 
     # A JSON API: there are no static files to serve.
     app = Flask(__name__, static_folder=None)
+    if settings.trusted_proxy_hops:
+        # Without this, every client behind the proxy shares the proxy's
+        # address, and with it one login rate limit.
+        hops = settings.trusted_proxy_hops
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops)  # type: ignore[method-assign]
     app.config.update(
         SECRET_KEY=settings.secret_key.get_secret_value(),
         TESTING=settings.app_env == "test",

@@ -7,7 +7,14 @@ time, and an order must reach the table before the foreign keys of its
 items are checked.
 
 The loader runs inside the caller's transaction and never commits, so a
-failed load leaves the previous data untouched.
+failed load leaves the previous data untouched. Because the tables are
+truncated in that same transaction, COPY can write the rows already frozen
+and mark most pages all-visible (FREEZE), so index-only scans mostly skip
+the heap from the first query instead of after autovacuum's first pass over
+the new rows. (A page where one COPY buffer ends and the next goes on is left
+unmarked until then.) COPY maintains the indexes row by row, which
+leaves them 30 to 40% larger than a fresh build, so they are rebuilt once
+the rows are in.
 """
 
 from collections.abc import Callable, Iterable, Sequence
@@ -82,6 +89,8 @@ def load_sales_data(
 
         for table in ("customers", "products", "orders"):
             cursor.execute(_continue_identity_after_max_id(table))
+        for table in SALES_TABLES:
+            cursor.execute(sql.SQL("REINDEX TABLE {}").format(sql.Identifier(table)))
         # Fresh statistics let the planner see millions of rows straight away
         # instead of waiting for autovacuum to notice.
         cursor.execute(
@@ -139,7 +148,7 @@ def _item_record(item: OrderItemRow) -> tuple[Any, ...]:
 def _copy(
     cursor: Cursor[Any], table: str, columns: Sequence[str], rows: Iterable[Sequence[Any]]
 ) -> None:
-    statement = sql.SQL("COPY {table} ({columns}) FROM STDIN").format(
+    statement = sql.SQL("COPY {table} ({columns}) FROM STDIN WITH (FREEZE)").format(
         table=sql.Identifier(table), columns=sql.SQL(", ").join(map(sql.Identifier, columns))
     )
     with cursor.copy(statement) as copy:

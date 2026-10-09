@@ -32,9 +32,15 @@ from tests.tokens import access_token_for, bearer
 
 QueryCounter = Callable[[], AbstractContextManager[list[str]]]
 
-# The harness turns each commit into savepoint statements, which production
-# never runs; they are not queries the code under test chose to make.
-_HARNESS_STATEMENTS = ("SAVEPOINT", "RELEASE SAVEPOINT", "ROLLBACK TO SAVEPOINT")
+# Not queries the code under test chose to make: the harness turns each
+# commit into savepoint statements, which production never runs, and every
+# request transaction starts by setting its statement timeout (extensions.py).
+_UNCOUNTED_STATEMENTS = (
+    "SAVEPOINT",
+    "RELEASE SAVEPOINT",
+    "ROLLBACK TO SAVEPOINT",
+    "SELECT set_config('statement_timeout'",
+)
 
 # Midnight UTC starts both a minute and an hour, so every limiter window in a
 # test opens exactly here and Retry-After is always one whole window.
@@ -133,7 +139,7 @@ def count_queries(db_session: scoped_session[Session]) -> QueryCounter:
             _context: Any,
             _executemany: bool,
         ) -> None:
-            if not statement.startswith(_HARNESS_STATEMENTS):
+            if not statement.startswith(_UNCOUNTED_STATEMENTS):
                 statements.append(statement)
 
         event.listen(connection, "before_cursor_execute", record)

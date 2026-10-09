@@ -9,6 +9,7 @@ from redis import Redis
 from sqlalchemy.orm import Session
 
 from app.models import User
+from app.repositories.orders import OrderRepository
 from app.repositories.users import UserRepository
 from app.seed.generator import SeedScale, generate_sales_data
 from app.seed.loader import (
@@ -51,9 +52,13 @@ class SeedService:
     ) -> None:
         self._session = session
         self._users = UserRepository(session)
+        self._orders = OrderRepository(session)
         self._redis = redis
         self._passwords = passwords
         self._clock = clock
+
+    def has_sales_data(self) -> bool:
+        return self._orders.any_exist()
 
     def seed(
         self,

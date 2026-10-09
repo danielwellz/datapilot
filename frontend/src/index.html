@@ -7,18 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <script>
-      // Applies a saved theme before the app starts, so the page never shows
-      // the other theme first. The key is THEME_STORAGE_KEY in ThemeService.
-      try {
-        var theme = localStorage.getItem('datapilot.theme');
-        if (theme === 'light' || theme === 'dark') {
-          document.documentElement.setAttribute('data-theme', theme);
-        }
-      } catch (error) {
-        // Storage is unavailable; the system preference applies.
-      }
-    </script>
+    <script src="theme.js"></script>
   </head>
   <body>
     <dp-root></dp-root>

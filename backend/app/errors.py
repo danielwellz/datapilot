@@ -10,8 +10,13 @@ from http import HTTPStatus
 from typing import ClassVar
 
 from flask import Flask, Response, jsonify
+from psycopg.errors import QueryCanceled
 from pydantic import ValidationError
 from pydantic.types import JsonValue
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import TimeoutError as RedisTimeoutError
+from sqlalchemy.exc import InterfaceError, OperationalError
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from werkzeug.exceptions import HTTPException
 
 from app.logging import get_request_id
@@ -138,6 +143,25 @@ class ServiceUnavailable(AppError):
     default_message = "The service is temporarily unavailable."
 
 
+class StatementTimeout(ServiceUnavailable):
+    code = "statement_timeout"
+    default_message = (
+        "The database took too long to answer and the query was stopped. "
+        "Narrow the filters or the period and try again."
+    )
+
+
+# A dependency that is down or overloaded is an outage to report, not a bug:
+# the client gets a 503 it may retry instead of a 500.
+_OUTAGE_ERRORS: dict[type[Exception], str] = {
+    RedisConnectionError: "redis",
+    RedisTimeoutError: "redis",
+    OperationalError: "database",
+    InterfaceError: "database",
+    PoolTimeoutError: "database",
+}
+
+
 def error_response(
     status: int,
     code: str,
@@ -167,6 +191,8 @@ def register_error_handlers(app: Flask) -> None:
     # so one that escapes from our code is a server bug and becomes a 500.
     app.register_error_handler(AppError, render_app_error)
     app.register_error_handler(HTTPException, _handle_http_exception)
+    for error_type in _OUTAGE_ERRORS:
+        app.register_error_handler(error_type, _handle_dependency_failure)
     app.register_error_handler(Exception, _handle_unexpected_error)
 
 
@@ -182,6 +208,16 @@ def _handle_http_exception(error: HTTPException) -> Response:
     headers = {name: value for name, value in error.get_headers() if name.lower() != "content-type"}
     code = _HTTP_ERROR_CODES.get(status, "http_error")
     return error_response(status, code, error.description or error.name, (), headers)
+
+
+def _handle_dependency_failure(error: Exception) -> Response:
+    if isinstance(error, OperationalError) and isinstance(error.orig, QueryCanceled):
+        # The statement itself is left out: its parameters can be user data.
+        logger.warning("statement timed out", extra={"dependency": "database"})
+        return render_app_error(StatementTimeout())
+    dependency = next(name for kind, name in _OUTAGE_ERRORS.items() if isinstance(error, kind))
+    logger.error("dependency unavailable", extra={"dependency": dependency}, exc_info=error)
+    return render_app_error(ServiceUnavailable())
 
 
 def _handle_unexpected_error(error: Exception) -> Response:

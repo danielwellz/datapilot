@@ -71,16 +71,38 @@ def openapi_command(output: Path | None) -> None:
     default=None,
     help="The history covers the three years before this day.  [default: today (UTC)]",
 )
+@click.option(
+    "--if-empty",
+    is_flag=True,
+    help="Load only when there are no orders yet; otherwise do nothing (for start-up jobs).",
+)
+@click.option(
+    "--yes",
+    is_flag=True,
+    help="Confirm replacing existing sales data in production.",
+)
 @with_appcontext
-def seed_command(scale: str, seed_value: int, end_date: datetime | None) -> None:
+def seed_command(
+    scale: str, seed_value: int, end_date: datetime | None, if_empty: bool, yes: bool
+) -> None:
     """Replace the sales data with a generated dataset and create the demo account."""
+    service = SeedService(db.session(), get_redis(), PasswordHasher())
+    if service.has_sales_data():
+        if if_empty:
+            click.echo("Sales data is already loaded; nothing to do.")
+            return
+        if current_settings().is_production and not yes:
+            raise click.ClickException(
+                "This production database already holds sales data, and seeding "
+                "replaces all of it. Pass --yes to replace it."
+            )
     chosen = SCALES[scale]
     end = end_date.date() if end_date is not None else clock.utc_today()
     click.echo(
         f"Seeding the {chosen.name} dataset ({chosen.orders:,} orders, seed {seed_value}).",
         err=True,
     )
-    report = SeedService(db.session(), get_redis(), PasswordHasher()).seed(
+    report = service.seed(
         chosen,
         seed=seed_value,
         end_date=end,

@@ -5,7 +5,7 @@ import re
 import sys
 import time
 import uuid
-from typing import IO
+from typing import IO, Any
 
 from flask import Flask, Response, g, has_request_context, request
 from pythonjsonlogger.json import JsonFormatter
@@ -18,6 +18,10 @@ _REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._-]{1,128}")
 
 # Identifies the handler configure_logging installs, so it can be replaced.
 STDOUT_HANDLER_NAME = "app.stdout"
+
+# The model provider SDKs' HTTP client logs every request at INFO, which
+# repeats what the ask service already logs about each attempt.
+_QUIET_LOGGERS = ("httpx2", "httpcore2")
 
 access_logger = logging.getLogger("app.access")
 
@@ -45,6 +49,29 @@ def build_log_handler(stream: IO[str]) -> logging.Handler:
     return handler
 
 
+def gunicorn_log_config(level: str) -> dict[str, Any]:
+    """Gunicorn's ``logconfig_dict``: its master and workers log through the same JSON handler.
+
+    The handler carries the name configure_logging uses, so the app replaces
+    it in each worker instead of adding a second one.
+    """
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {
+            STDOUT_HANDLER_NAME: {"()": build_log_handler, "stream": "ext://sys.stdout"},
+        },
+        "formatters": {},
+        "root": {"level": level, "handlers": [STDOUT_HANDLER_NAME]},
+        "loggers": {
+            # No handlers of its own: the records reach the root handler.
+            "gunicorn.error": {"level": level, "handlers": [], "propagate": True},
+            # Dropped: the app logs each request itself, with its id and duration.
+            "gunicorn.access": {"handlers": [], "propagate": False},
+        },
+    }
+
+
 def configure_logging(level: str) -> None:
     """Send every log record, ours and third-party, to stdout as JSON.
 
@@ -59,6 +86,8 @@ def configure_logging(level: str) -> None:
     handler.set_name(STDOUT_HANDLER_NAME)
     root.addHandler(handler)
     root.setLevel(level)
+    for name in _QUIET_LOGGERS:
+        logging.getLogger(name).setLevel(logging.WARNING)
 
 
 def get_request_id() -> str:

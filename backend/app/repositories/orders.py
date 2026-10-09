@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import ColumnElement, Select, literal, select, tuple_
+from sqlalchemy import ColumnElement, Select, exists, literal, select, tuple_
 from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
 
 from app.models import Customer, Order, OrderChannel, OrderItem, OrderSort, OrderStatus
@@ -125,3 +125,6 @@ class OrderRepository:
     def get_with_details(self, order_id: int) -> Order | None:
         """The order with its customer and its items' products loaded, or ``None``."""
         return self._session.scalars(build_detail_statement(order_id)).one_or_none()
+
+    def any_exist(self) -> bool:
+        return bool(self._session.scalar(select(exists().select_from(Order))))

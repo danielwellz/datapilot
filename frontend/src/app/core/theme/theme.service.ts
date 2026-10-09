@@ -3,7 +3,7 @@ import { DestroyRef, Injectable, computed, inject, signal, DOCUMENT } from '@ang
 export type Theme = 'light' | 'dark';
 export type ThemePreference = Theme | 'system';
 
-/** localStorage key, shared with the inline script in index.html. */
+/** localStorage key, shared with public/theme.js, which applies it before the app starts. */
 export const THEME_STORAGE_KEY = 'datapilot.theme';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';

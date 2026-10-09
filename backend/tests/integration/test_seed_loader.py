@@ -194,6 +194,42 @@ def test_load_refreshes_planner_statistics(session: Session, connection: Connect
     assert estimated == 3_000
 
 
+@pytest.mark.parametrize("table", ["orders", "order_items"])
+def test_most_loaded_pages_are_all_visible_without_a_vacuum(
+    session: Session, connection: Connection[Any], table: str
+) -> None:
+    seed(connection)
+
+    pages, all_visible = session.execute(
+        text("SELECT relpages, relallvisible FROM pg_class WHERE relname = :table"),
+        {"table": table},
+    ).one()
+
+    # Without FREEZE none would be until autovacuum ran. A page where one
+    # COPY buffer ends and the next goes on is left unmarked (27 of 36 and
+    # 50 of 64 pages here); autovacuum's insert threshold covers those.
+    assert pages > 0
+    assert all_visible > pages // 2
+
+
+def test_orders_indexes_are_as_compact_as_a_fresh_build(
+    session: Session, connection: Connection[Any]
+) -> None:
+    seed(connection)
+    indexes = session.execute(
+        text("SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'orders'")
+    ).all()
+
+    for name, definition in indexes:
+        fresh = f"fresh_{name}"[:63]
+        session.execute(text(definition.replace(f"INDEX {name} ON", f"INDEX {fresh} ON", 1)))
+        loaded_bytes, fresh_bytes = session.execute(
+            text("SELECT pg_relation_size(:loaded), pg_relation_size(:fresh)"),
+            {"loaded": name, "fresh": fresh},
+        ).one()
+        assert loaded_bytes == fresh_bytes, name
+
+
 def test_table_stats_report_sizes_of_the_sales_tables(connection: Connection[Any]) -> None:
     seed(connection)
 

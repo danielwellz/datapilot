@@ -56,8 +56,8 @@ def _auth_service() -> AuthService:
 
 
 def _client_ip() -> str:
-    # The direct peer. Behind a reverse proxy this must come from a trusted
-    # X-Forwarded-For hop instead (ProxyFix), or every client shares one limit.
+    # The direct peer, or behind a reverse proxy the address it forwarded
+    # (ProxyFix, configured with TRUSTED_PROXY_HOPS in create_app).
     return request.remote_addr or "unknown"
 
 
