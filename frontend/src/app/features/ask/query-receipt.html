@@ -64,5 +64,19 @@
     <div class="receipt__section">
       <dp-receipt-sql [sql]="answer.sql" />
     </div>
+
+    <div class="receipt__section">
+      <dp-result-table
+        [columns]="answer.columns"
+        [rows]="answer.rows"
+        [label]="'Result of: ' + entry().question"
+      />
+      @if (answer.truncated) {
+        <p class="receipt__note">
+          Showing the first {{ formatCount(answer.row_count) }} rows, the most one answer returns.
+          More rows matched: ask for fewer, for example a top 10 or a shorter period.
+        </p>
+      }
+    </div>
   }
 </article>

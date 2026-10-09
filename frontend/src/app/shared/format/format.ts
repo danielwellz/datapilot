@@ -96,6 +96,18 @@ export function formatCount(value: number): string {
   return withMinus(count.format(value));
 }
 
+/**
+ * A number from the API with every digit it has: `"1234567.50"` becomes
+ * `"1,234,567.50"`. Decimals arrive as strings and are formatted as they are,
+ * keeping their scale, so large values keep their precision and amounts keep
+ * their cents.
+ */
+export function formatDecimal(value: string | number): string {
+  const text = String(value);
+  const digits = text.split('.')[1]?.length ?? 0;
+  return withMinus(decimalFormat(digits).format(text as `${number}`));
+}
+
 /** How long something took: `"214 ms"` below a second, `"2.4 s"` from one on. */
 export function formatDuration(milliseconds: number): string {
   const rounded = Math.round(milliseconds);
@@ -163,6 +175,20 @@ export function formatChange(change: number, good: 'up' | 'down' = 'up'): Change
 }
 
 /** Replaces the hyphen-minus Intl writes with the true minus sign. */
+const decimalFormats = new Map<number, Intl.NumberFormat>();
+
+function decimalFormat(digits: number): Intl.NumberFormat {
+  let format = decimalFormats.get(digits);
+  if (format === undefined) {
+    format = new Intl.NumberFormat(LOCALE, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+    decimalFormats.set(digits, format);
+  }
+  return format;
+}
+
 function withMinus(text: string): string {
   return text.replace('-', MINUS);
 }

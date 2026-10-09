@@ -1,0 +1,32 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+// Wide results scroll sideways inside the receipt, long ones downwards;
+// the page itself never scrolls sideways.
+.result-table__scroll {
+  overflow: auto;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-control);
+  contain: paint;
+}
+
+// Figures in the receipt's mono voice, so digits line up down a column.
+.result-table {
+  font-family: var(--font-mono);
+
+  // Rows stay one line high, as virtual scrolling requires: long text
+  // widens its column and the table scrolls sideways.
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-sheet);
+    box-shadow: inset 0 -1px 0 var(--color-rule);
+  }
+}
+
+.result-table__empty {
+  color: var(--color-graphite);
+}

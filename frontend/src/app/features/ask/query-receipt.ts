@@ -3,6 +3,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { formatCount, formatDuration, formatUtcDateTime } from '../../shared/format/format';
 import { AskStore, ThreadEntry, auditIdOf } from './ask.store';
 import { ReceiptSql } from './receipt-sql';
+import { ResultTable } from './result-table';
 
 let nextId = 1;
 
@@ -24,7 +25,7 @@ export function rowsText(rowCount: number, truncated: boolean): string {
  */
 @Component({
   selector: 'dp-query-receipt',
-  imports: [ReceiptSql],
+  imports: [ReceiptSql, ResultTable],
   templateUrl: './query-receipt.html',
   styleUrl: './query-receipt.scss',
 })
@@ -58,6 +59,7 @@ export class QueryReceipt {
     Math.max(0, Math.floor((this.store.now() - this.entry().startedAt) / 1000)),
   );
 
+  protected readonly formatCount = formatCount;
   protected readonly formatDuration = formatDuration;
   protected readonly rowsText = rowsText;
 }

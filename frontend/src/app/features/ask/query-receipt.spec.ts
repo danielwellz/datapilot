@@ -142,6 +142,25 @@ describe('QueryReceipt', () => {
     expect(text('.receipt-sql__toggle')).toContain('Show SQL that ran');
   });
 
+  it('shows the result rows under the SQL', async () => {
+    await render(answered());
+
+    const region = element.querySelector('dp-result-table [role="region"]');
+    expect(region?.getAttribute('aria-label')).toBe(
+      'Result of: What was the monthly revenue over the last 12 months?',
+    );
+    expect(element.querySelectorAll('dp-result-table tbody tr')).toHaveLength(2);
+    expect(text('.receipt__section:last-child .receipt__note')).toBe('');
+  });
+
+  it('says how to get the rows a truncated result left out', async () => {
+    await render(answered({ truncated: true, row_count: 1000 }));
+
+    expect(text('.receipt__section:last-child .receipt__note')).toBe(
+      'Showing the first 1,000 rows, the most one answer returns. More rows matched: ask for fewer, for example a top 10 or a shorter period.',
+    );
+  });
+
   it('shows a pending question with the model asked and the seconds so far', async () => {
     vi.useFakeTimers({ now: STARTED + 3200, toFake: ['Date'] });
     try {

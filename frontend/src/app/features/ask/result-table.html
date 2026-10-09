@@ -1,0 +1,73 @@
+@if (rows().length === 0) {
+  <p class="result-table__empty">The query ran and returned no rows.</p>
+} @else if (virtual()) {
+  <cdk-virtual-scroll-viewport
+    class="result-table__scroll"
+    role="region"
+    tabindex="0"
+    [attr.aria-label]="label()"
+    [itemSize]="itemSize"
+    [style.height.px]="viewportHeight"
+    (scrolledIndexChange)="syncHeader()"
+  >
+    <table class="data-table result-table" [attr.aria-rowcount]="rows().length + 1">
+      <thead>
+        <tr aria-rowindex="1">
+          @for (column of result().columns; track $index) {
+            <th
+              scope="col"
+              [class.data-table__number]="column.numeric"
+              [style.min-width.ch]="column.widthCh"
+              [style.top.px]="headerOffset()"
+            >
+              {{ column.name }}
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          *cdkVirtualFor="let row of result().rows; let index = index"
+          [attr.aria-rowindex]="index + 2"
+        >
+          @for (cell of row; track $index) {
+            <td [class.data-table__number]="result().columns[$index]?.numeric">{{ cell }}</td>
+          }
+        </tr>
+      </tbody>
+    </table>
+  </cdk-virtual-scroll-viewport>
+} @else {
+  <div
+    class="result-table__scroll"
+    role="region"
+    tabindex="0"
+    [attr.aria-label]="label()"
+    [style.max-height.px]="viewportHeight"
+  >
+    <table class="data-table result-table">
+      <thead>
+        <tr>
+          @for (column of result().columns; track $index) {
+            <th
+              scope="col"
+              [class.data-table__number]="column.numeric"
+              [style.min-width.ch]="column.widthCh"
+            >
+              {{ column.name }}
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of result().rows; track $index) {
+          <tr>
+            @for (cell of row; track $index) {
+              <td [class.data-table__number]="result().columns[$index]?.numeric">{{ cell }}</td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

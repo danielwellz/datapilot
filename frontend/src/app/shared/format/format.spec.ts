@@ -7,6 +7,7 @@ import {
   formatChange,
   formatCompactMoney,
   formatCount,
+  formatDecimal,
   formatDuration,
   formatDayRange,
   formatMoney,
@@ -66,6 +67,14 @@ describe('formatting', () => {
     it('groups counts and writes a true minus sign', () => {
       expect(formatCount(69_500)).toBe('69,500');
       expect(formatCount(-3)).toBe('−3');
+    });
+
+    it('groups a decimal and keeps every digit and its scale', () => {
+      expect(formatDecimal('1234567.125')).toBe('1,234,567.125');
+      expect(formatDecimal('90071992547409930.01')).toBe('90,071,992,547,409,930.01');
+      expect(formatDecimal('-5.50')).toBe('−5.50');
+      expect(formatDecimal(42)).toBe('42');
+      expect(formatDecimal(0.25)).toBe('0.25');
     });
 
     it('formats a duration in milliseconds below a second and in seconds above', () => {
