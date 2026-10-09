@@ -173,4 +173,24 @@ describe('DashboardPage', () => {
     expect(TestBed.inject(Router).url).toBe('/dashboard?category=Electronics');
     expect(await answerAll()).toEqual(['products?limit=10&days=365&category=Electronics']);
   });
+
+  it('keeps both of two selections made before the first navigation ends', async () => {
+    await open('/dashboard');
+    await answerAll();
+
+    page.querySelector<HTMLInputElement>('input[value="7"]')?.click();
+    const select = page.querySelector<HTMLSelectElement>('#customers-country');
+    if (select === null) {
+      throw new Error('No country select');
+    }
+    select.value = 'DE';
+    select.dispatchEvent(new Event('change'));
+    await settle();
+
+    expect(TestBed.inject(Router).url).toBe('/dashboard?days=7&country=DE');
+    expect(await answerAll()).toEqual([
+      'summary?days=7',
+      'top-customers?country=DE&limit=10&days=365',
+    ]);
+  });
 });

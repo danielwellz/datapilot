@@ -35,11 +35,18 @@ export class DashboardPage {
     });
   }
 
-  /** Puts a selection in the URL, which loads it; replaced, so Back leaves the page. */
+  /**
+   * Puts a selection in the URL, replaced so Back leaves the page. The store
+   * takes it at once: a navigation ends a moment later, and a second change
+   * made before then must build on this one, not on the URL it replaces.
+   * When the navigation ends, the URL hands the store the same values.
+   */
   protected select(change: Partial<DashboardParams>): void {
+    const params = { ...this.store.params(), ...change };
+    this.store.params.set(params);
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: paramsToQuery({ ...this.store.params(), ...change }),
+      queryParams: paramsToQuery(params),
       queryParamsHandling: 'merge',
       replaceUrl: true,
       scroll: 'manual',
