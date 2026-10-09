@@ -145,14 +145,14 @@ export interface ChangeText {
  * and sentiment follow the rounded text, so "0.0%" is never colored.
  */
 export function formatChange(change: number, good: 'up' | 'down' = 'up'): ChangeText {
+  const parts = percentFormat(1, true).formatToParts(change);
   let direction: Direction = 'flat';
-  for (const part of percentFormat(1, true).formatToParts(change)) {
-    if (part.type === 'plusSign') direction = 'up';
-    if (part.type === 'minusSign') direction = 'down';
-  }
+  if (parts.some((part) => part.type === 'plusSign')) direction = 'up';
+  if (parts.some((part) => part.type === 'minusSign')) direction = 'down';
   const sentiment: Sentiment =
     direction === 'flat' ? 'neutral' : direction === good ? 'favorable' : 'unfavorable';
-  return { text: withMinus(percentFormat(1, true).format(change)), direction, sentiment };
+  const text = withMinus(parts.map((part) => part.value).join(''));
+  return { text, direction, sentiment };
 }
 
 /** Replaces the hyphen-minus Intl writes with the true minus sign. */

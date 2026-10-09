@@ -2,9 +2,9 @@ import { Component, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 
+import { CohortHeatmap } from './cohort-heatmap';
 import { DashboardParams, paramsFromQuery, paramsToQuery } from './dashboard-params';
 import { DashboardStore } from './dashboard.store';
-import { CohortHeatmap } from './cohort-heatmap';
 import { KpiRow } from './kpi-row';
 import { ProductRanking } from './product-ranking';
 import { RevenueChart } from './revenue-chart';

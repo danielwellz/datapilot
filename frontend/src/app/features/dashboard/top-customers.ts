@@ -5,7 +5,13 @@ import { MetaOut, TopCustomerOut, TopCustomersOut } from '../../core/api/models'
 import { countryName, formatCount } from '../../shared/format/format';
 import { UtcDatePipe } from '../../shared/format/format.pipes';
 import { Money } from '../../shared/format/money';
-import { Panel, PanelView, RANKING_DAYS, TOP_CUSTOMERS_IN_COUNTRY } from './dashboard.store';
+import {
+  Panel,
+  PanelView,
+  RANKING_DAYS,
+  TOP_CUSTOMERS_IN_COUNTRY,
+  panelView,
+} from './dashboard.store';
 import { PanelError } from './panel-error';
 import { PanelSelect, SelectOption } from './panel-select';
 
@@ -43,17 +49,9 @@ export class TopCustomers {
       : items;
   });
 
-  protected readonly view = computed<PanelView>(() => {
-    const panel = this.panel();
-    if (panel.status() === 'failed') {
-      return 'failed';
-    }
-    const value = panel.value();
-    if (value === undefined) {
-      return 'loading';
-    }
-    return value.items.length === 0 ? 'empty' : 'loaded';
-  });
+  protected readonly view = computed<PanelView>(() =>
+    panelView(this.panel(), (value) => value.items.length === 0),
+  );
 
   protected readonly caption = computed(() => {
     const country = this.country();

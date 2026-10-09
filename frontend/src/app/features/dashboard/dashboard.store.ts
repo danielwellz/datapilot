@@ -121,6 +121,18 @@ export class DashboardStore {
   );
 }
 
+/** The view of a panel whose answer can be empty, such as a ranking with no rows. */
+export function panelView<T>(panel: Panel<T>, isEmpty: (value: T) => boolean): PanelView {
+  if (panel.status() === 'failed') {
+    return 'failed';
+  }
+  const value = panel.value();
+  if (value === undefined) {
+    return 'loading';
+  }
+  return isEmpty(value) ? 'empty' : 'loaded';
+}
+
 /** Errors leave the stream as {@link ApiError}, so panels can show the message and request id. */
 function withApiError<T>(source: Observable<T>): Observable<T> {
   return source.pipe(catchError((error: unknown) => throwError(() => parseApiError(error))));

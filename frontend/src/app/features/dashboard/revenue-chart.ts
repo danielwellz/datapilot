@@ -12,7 +12,7 @@ import {
   formatMonth,
 } from '../../shared/format/format';
 import { Money } from '../../shared/format/money';
-import { Panel, PanelView, REVENUE_MONTHS } from './dashboard.store';
+import { Panel, PanelView, REVENUE_MONTHS, panelView } from './dashboard.store';
 import { PanelError } from './panel-error';
 
 /** The chart's line and the tooltip's exact figures, from the API's rows. */
@@ -70,16 +70,10 @@ export class RevenueChart {
   protected readonly items = computed(() => this.panel().value()?.items ?? []);
   protected readonly spec = computed(() => revenueChartSpec(this.items()));
 
-  protected readonly view = computed<PanelView>(() => {
-    const panel = this.panel();
-    if (panel.status() === 'failed') {
-      return 'failed';
-    }
-    if (panel.value() === undefined) {
-      return 'loading';
-    }
-    return this.items().some((item) => Number(item.revenue) > 0) ? 'loaded' : 'empty';
-  });
+  /** Months without a sale are listed with zero revenue, so "empty" means no month sold. */
+  protected readonly view = computed<PanelView>(() =>
+    panelView(this.panel(), (value) => value.items.every((item) => Number(item.revenue) === 0)),
+  );
 
   protected readonly period = computed(() => {
     const items = this.items();

@@ -10,7 +10,7 @@ import {
   formatPercent,
 } from '../../shared/format/format';
 import { Money } from '../../shared/format/money';
-import { Panel, PanelView, RANKING_DAYS, TOP_PRODUCTS } from './dashboard.store';
+import { Panel, PanelView, RANKING_DAYS, TOP_PRODUCTS, panelView } from './dashboard.store';
 import { PanelError } from './panel-error';
 import { PanelSelect, SelectOption } from './panel-select';
 
@@ -84,17 +84,9 @@ export class ProductRanking {
     () => Math.max(this.items().length, 4) * BAR_HEIGHT + AXIS_HEIGHT,
   );
 
-  protected readonly view = computed<PanelView>(() => {
-    const panel = this.panel();
-    if (panel.status() === 'failed') {
-      return 'failed';
-    }
-    const value = panel.value();
-    if (value === undefined) {
-      return 'loading';
-    }
-    return value.items.length === 0 ? 'empty' : 'loaded';
-  });
+  protected readonly view = computed<PanelView>(() =>
+    panelView(this.panel(), (value) => value.items.length === 0),
+  );
 
   protected readonly caption = computed(() => {
     const category = this.category();

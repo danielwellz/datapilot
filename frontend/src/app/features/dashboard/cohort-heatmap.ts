@@ -3,7 +3,7 @@ import { Component, computed, input } from '@angular/core';
 import { CohortsOut } from '../../core/api/models';
 import { formatCount, formatMonth, formatPercent } from '../../shared/format/format';
 import { cohortScale } from './cohort-scale';
-import { COHORT_MONTHS, Panel, PanelView } from './dashboard.store';
+import { COHORT_MONTHS, Panel, PanelView, panelView } from './dashboard.store';
 import { PanelError } from './panel-error';
 
 interface HeatCell {
@@ -91,15 +91,7 @@ export class CohortHeatmap {
       : `${span}, ${formatMonth(first.cohort_month)} to ${formatMonth(last.cohort_month)}`;
   });
 
-  protected readonly view = computed<PanelView>(() => {
-    const panel = this.panel();
-    if (panel.status() === 'failed') {
-      return 'failed';
-    }
-    const value = panel.value();
-    if (value === undefined) {
-      return 'loading';
-    }
-    return value.items.length === 0 ? 'empty' : 'loaded';
-  });
+  protected readonly view = computed<PanelView>(() =>
+    panelView(this.panel(), (value) => value.items.length === 0),
+  );
 }
