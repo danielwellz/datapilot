@@ -4,6 +4,7 @@ SHELL := /bin/bash
 
 BACKEND := backend
 FRONTEND := frontend
+E2E := e2e
 # Flask's default port 5000 is taken by AirPlay Receiver on macOS.
 FLASK_PORT := 5001
 
@@ -22,6 +23,7 @@ DEMO_SECRETS := DEMO_SECRET_KEY DEMO_JWT_SECRET_KEY DEMO_POSTGRES_PASSWORD \
 	be-install be-dev be-test be-lint be-format be-typecheck \
 	db-migrate db-upgrade db-roles seed explain explain-analytics eval-ask \
 	fe-install fe-dev fe-test fe-lint fe-format fe-build \
+	e2e-install e2e e2e-typecheck \
 	hooks check demo demo-down demo-reset demo-logs
 
 help: ## List available targets
@@ -107,12 +109,23 @@ fe-format: ## Apply Prettier formatting to the frontend
 fe-build: ## Build the frontend for production (includes the template type check)
 	cd $(FRONTEND) && npx ng build
 
+# --- End-to-end -----------------------------------------------------------
+
+e2e-install: ## Install the smoke test's dependencies and its Chromium
+	cd $(E2E) && npm ci && npx playwright install chromium
+
+e2e: ## Run the browser smoke test against the running demo stack (make demo)
+	cd $(E2E) && npx playwright test
+
+e2e-typecheck: ## Type-check the smoke test
+	cd $(E2E) && npx tsc --noEmit
+
 # --- Workflow -------------------------------------------------------------
 
 hooks: ## Install the git pre-commit hook
 	cd $(BACKEND) && uv run pre-commit install --hook-type pre-commit
 
-check: be-lint be-typecheck be-test fe-lint fe-test fe-build ## Run every lint, type check and test suite
+check: be-lint be-typecheck be-test fe-lint fe-test fe-build e2e-typecheck ## Run every lint, type check and test suite (the pre-push command)
 
 # --- Demo stack -----------------------------------------------------------
 
