@@ -1,7 +1,9 @@
-# syntax=docker/dockerfile:1
+# No `# syntax=` line: the engine's built-in Dockerfile frontend supports
+# everything used here (including RUN --mount), and the docker/dockerfile
+# image would be one more anonymous pull from Docker Hub.
 
 # --- Build ------------------------------------------------------------------
-FROM node:24.21.0-alpine AS build
+FROM public.ecr.aws/docker/library/node:24.21.0-alpine AS build
 ENV NG_CLI_ANALYTICS=false
 WORKDIR /build
 COPY package.json package-lock.json ./
@@ -14,7 +16,7 @@ RUN npx ng build
 
 # --- Runtime ----------------------------------------------------------------
 # The unprivileged variant runs as the nginx user and listens on 8080.
-FROM nginxinc/nginx-unprivileged:1.30.5-alpine AS runtime
+FROM public.ecr.aws/nginx/nginx-unprivileged:1.30.5-alpine AS runtime
 COPY --from=nginx default.conf /etc/nginx/conf.d/default.conf
 COPY --from=nginx security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /build/dist/frontend/browser /usr/share/nginx/html

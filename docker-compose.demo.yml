@@ -5,6 +5,10 @@
 # services of docker-compose.yml. Secrets come from .env.demo, which
 # `make demo` writes once with random values; model API keys and settings
 # come from .env. Without any key, Ask your data uses the demo model.
+#
+# Base images come from Amazon ECR Public, which mirrors Docker Hub's
+# official images with the same digests without Docker Hub's anonymous
+# pull limit, which CI runners share.
 
 name: datapilot-demo
 
@@ -37,7 +41,7 @@ x-hardened: &hardened
 
 services:
   postgres:
-    image: postgres:16.15-alpine
+    image: public.ecr.aws/docker/library/postgres:16.15-alpine
     environment:
       # The owner, which runs migrations and the seed; the API connects as
       # APP_DB_USER, created by infra/postgres/demo on first start.
@@ -61,7 +65,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7.4.11-alpine
+    image: public.ecr.aws/docker/library/redis:7.4.11-alpine
     # Bounded memory. Every cache entry and token has a TTL, so volatile-lru
     # evicts the least recently used of them first; keys without a TTL (the
     # data version) are never evicted.
@@ -94,6 +98,8 @@ services:
 
   backend:
     image: datapilot-demo-backend
+    # Built by the migrate service above; never looked up in a registry.
+    pull_policy: never
     <<: *hardened
     environment:
       <<: *backend-environment

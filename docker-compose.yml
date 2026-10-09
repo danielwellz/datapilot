@@ -2,7 +2,7 @@ name: datapilot
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: public.ecr.aws/docker/library/postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-datapilot}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datapilot}
@@ -23,7 +23,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: public.ecr.aws/docker/library/redis:7-alpine
     # Bounded memory: bench runs and parameter combinations leave cache
     # entries behind until their TTL. Every cache entry and token has a TTL,
     # so volatile-lru evicts among them; the data version key has none.
