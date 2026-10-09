@@ -17,6 +17,8 @@ export class ApiError extends Error {
     message: string,
     readonly details: readonly Record<string, JsonValue>[] = [],
     readonly requestId: string | null = null,
+    /** Seconds to wait before asking again, from `Retry-After`; null when not given. */
+    readonly retryAfterSeconds: number | null = null,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -53,18 +55,27 @@ export function parseApiError(error: unknown): ApiError {
     return new ApiError(0, 'client_error', SERVER_MESSAGE);
   }
   const requestId = error.headers.get('X-Request-ID');
+  const retryAfter = parseRetryAfter(error.headers.get('Retry-After'));
   if (error.status === 0) {
     return new ApiError(0, 'network_error', NETWORK_MESSAGE, [], requestId);
   }
   if (isErrorOut(error.error)) {
     const { code, message, details, request_id } = error.error.error;
-    return new ApiError(error.status, code, message, details, request_id);
+    return new ApiError(error.status, code, message, details, request_id, retryAfter);
   }
   const message =
     error.status >= 500
       ? SERVER_MESSAGE
       : `The request failed with status ${String(error.status)}.`;
-  return new ApiError(error.status, 'http_error', message, [], requestId);
+  return new ApiError(error.status, 'http_error', message, [], requestId, retryAfter);
+}
+
+/**
+ * The delay in a `Retry-After` header. The backend sends whole seconds; the
+ * HTTP-date form is not used by it, so it is read as "not given".
+ */
+function parseRetryAfter(value: string | null): number | null {
+  return value !== null && /^\d+$/.test(value.trim()) ? Number(value.trim()) : null;
 }
 
 function isErrorOut(body: unknown): body is ErrorOut {

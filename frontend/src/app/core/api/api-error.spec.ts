@@ -2,9 +2,21 @@ import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 
 import { ApiError, parseApiError } from './api-error';
 
-function httpError(status: number, body: unknown, requestId?: string): HttpErrorResponse {
-  const headers = requestId ? new HttpHeaders({ 'X-Request-ID': requestId }) : new HttpHeaders();
+function httpError(
+  status: number,
+  body: unknown,
+  requestId?: string,
+  extraHeaders: Record<string, string> = {},
+): HttpErrorResponse {
+  const headers = new HttpHeaders({
+    ...(requestId ? { 'X-Request-ID': requestId } : {}),
+    ...extraHeaders,
+  });
   return new HttpErrorResponse({ status, error: body, headers, url: '/api/test' });
+}
+
+function envelope(code: string): unknown {
+  return { error: { code, message: 'Slow down.', details: [], request_id: 'req-9' } };
 }
 
 describe('parseApiError', () => {
@@ -55,6 +67,35 @@ describe('parseApiError', () => {
     const error = parseApiError(httpError(400, { error: { code: 'bad_request' } }));
 
     expect(error.code).toBe('http_error');
+  });
+
+  it('reads the seconds to wait from Retry-After', () => {
+    const error = parseApiError(
+      httpError(429, envelope('rate_limited'), 'req-9', { 'Retry-After': '42' }),
+    );
+
+    expect(error.retryAfterSeconds).toBe(42);
+  });
+
+  it('keeps Retry-After on a response without an envelope', () => {
+    const error = parseApiError(httpError(503, 'Unavailable', undefined, { 'Retry-After': '7' }));
+
+    expect(error.retryAfterSeconds).toBe(7);
+  });
+
+  it.each([['soon'], ['Wed, 21 Oct 2026 07:28:00 GMT'], ['-5'], ['1.5']])(
+    'treats a Retry-After of %j as not given',
+    (value) => {
+      const error = parseApiError(
+        httpError(429, envelope('rate_limited'), undefined, { 'Retry-After': value }),
+      );
+
+      expect(error.retryAfterSeconds).toBeNull();
+    },
+  );
+
+  it('has no Retry-After when the header is missing', () => {
+    expect(parseApiError(httpError(429, envelope('rate_limited'))).retryAfterSeconds).toBeNull();
   });
 
   it('returns an ApiError unchanged', () => {
