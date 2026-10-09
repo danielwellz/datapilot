@@ -1,0 +1,94 @@
+<section
+  class="panel"
+  aria-labelledby="products-title"
+  [attr.aria-busy]="panel().status() === 'loading'"
+>
+  <header class="panel__header">
+    <div>
+      <h2 id="products-title" class="panel__title">Top products</h2>
+      <p class="panel__period">Paid revenue over the last {{ days }} complete days</p>
+    </div>
+    <div class="panel__controls">
+      <dp-panel-select
+        controlId="products-category"
+        label="Category"
+        allLabel="All categories"
+        [options]="categories()"
+        [value]="category()"
+        [failed]="meta().status() === 'failed'"
+        (valueChange)="categoryChange.emit($event)"
+        (retry)="meta().retry()"
+      />
+      @if (view() === 'loaded') {
+        <button
+          class="button"
+          type="button"
+          [attr.aria-pressed]="showTable()"
+          (click)="showTable.set(!showTable())"
+        >
+          Show as table
+        </button>
+      }
+    </div>
+  </header>
+
+  @switch (view()) {
+    @case ('failed') {
+      <dp-panel-error
+        subject="The product ranking"
+        [error]="panel().error()"
+        (retry)="panel().retry()"
+      />
+    }
+    @case ('loading') {
+      <p class="panel__placeholder products__placeholder">Loading the product ranking…</p>
+    }
+    @case ('empty') {
+      <p class="state">{{ emptyText() }}</p>
+    }
+    @default {
+      <div class="panel__body" [class.panel__body--stale]="panel().stale()">
+        @if (!showTable()) {
+          <dp-chart [spec]="spec()" [height]="chartHeight()" />
+        }
+        <div
+          class="table-scroll"
+          [class.visually-hidden]="!showTable()"
+          role="region"
+          aria-labelledby="products-caption"
+          [attr.tabindex]="showTable() ? 0 : null"
+        >
+          <table class="data-table">
+            <caption id="products-caption" class="visually-hidden">
+              {{
+                caption()
+              }}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col" class="data-table__number">Rank</th>
+                <th scope="col">Product</th>
+                <th scope="col">Category</th>
+                <th scope="col" class="data-table__number">Units sold</th>
+                <th scope="col" class="data-table__number">Revenue</th>
+                <th scope="col" class="data-table__number">Share of category</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of items(); track item.product_id) {
+                <tr>
+                  <td class="data-table__number">{{ item.rank }}</td>
+                  <th scope="row" class="products__name">{{ item.name }}</th>
+                  <td>{{ item.category }}</td>
+                  <td class="data-table__number">{{ formatCount(item.units) }}</td>
+                  <td class="data-table__number"><dp-money [amount]="item.revenue" /></td>
+                  <td class="data-table__number">{{ shareText(item.category_share) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+</section>

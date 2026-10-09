@@ -32,5 +32,18 @@
       [country]="store.params().country"
       (countryChange)="select({ country: $event })"
     />
+
+    @defer (on viewport; prefetch on idle) {
+      <dp-product-ranking
+        [panel]="store.products"
+        [meta]="store.meta"
+        [category]="store.params().category"
+        (categoryChange)="select({ category: $event })"
+      />
+    } @placeholder {
+      <section class="panel deferred deferred--products" aria-label="Top products">
+        <p class="panel__placeholder">Loading the product ranking…</p>
+      </section>
+    }
   </div>
 </section>

@@ -124,6 +124,7 @@ describe('DashboardPage', () => {
     expect(page.querySelector('.deferred--revenue')?.textContent.trim()).toBe(
       'Loading monthly revenue…',
     );
+    expect(page.querySelector('dp-product-ranking')).toBeNull();
 
     for (const block of await harness.fixture.getDeferBlocks()) {
       await block.render(DeferBlockState.Complete);
@@ -131,6 +132,7 @@ describe('DashboardPage', () => {
 
     expect(page.querySelector('.deferred--revenue')).toBeNull();
     expect(page.querySelector('dp-revenue-chart h2')?.textContent).toBe('Monthly revenue');
+    expect(page.querySelector('dp-product-ranking h2')?.textContent).toBe('Top products');
   });
 
   it('puts a chosen country in the URL and loads its top customers', async () => {
@@ -147,5 +149,24 @@ describe('DashboardPage', () => {
 
     expect(TestBed.inject(Router).url).toBe('/dashboard?country=GB');
     expect(await answerAll()).toEqual(['top-customers?country=GB&limit=10&days=365']);
+  });
+
+  it('puts a chosen category in the URL once its block renders, and ranks within it', async () => {
+    await open('/dashboard');
+    await answerAll();
+    for (const block of await harness.fixture.getDeferBlocks()) {
+      await block.render(DeferBlockState.Complete);
+    }
+
+    const select = page.querySelector<HTMLSelectElement>('#products-category');
+    if (select === null) {
+      throw new Error('No category select');
+    }
+    select.value = 'Electronics';
+    select.dispatchEvent(new Event('change'));
+    await settle();
+
+    expect(TestBed.inject(Router).url).toBe('/dashboard?category=Electronics');
+    expect(await answerAll()).toEqual(['products?limit=10&days=365&category=Electronics']);
   });
 });
