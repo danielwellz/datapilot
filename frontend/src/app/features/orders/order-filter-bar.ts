@@ -59,14 +59,8 @@ type MetaState = { status: 'loading' } | { status: 'loaded'; meta: MetaOut } | {
 const TOTAL_MESSAGE = { pattern: 'Enter an amount like 250 or 99.50.' };
 
 function rangesValidator(group: AbstractControl): ValidationErrors | null {
-  const { dateFrom, dateTo, minTotal, maxTotal } = (
-    group as AbstractControl<{
-      dateFrom: string;
-      dateTo: string;
-      minTotal: string;
-      maxTotal: string;
-    }>
-  ).value;
+  const { dateFrom, dateTo, minTotal, maxTotal } = (group as AbstractControl<FilterFormValue>)
+    .value;
   const errors: ValidationErrors = {};
   if (dateFrom && dateTo && dateFrom > dateTo) {
     errors['dateRange'] = true;

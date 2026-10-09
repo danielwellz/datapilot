@@ -1,5 +1,5 @@
 import { ViewportScroller } from '@angular/common';
-import { Component, afterNextRender, computed, inject } from '@angular/core';
+import { Component, DestroyRef, afterNextRender, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationStart, Router, RouterLink, Scroll } from '@angular/router';
 import { filter, map, take } from 'rxjs';
@@ -39,6 +39,8 @@ export class OrdersPage {
   protected readonly store = inject(OrdersStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly scroller = inject(ViewportScroller);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly channelLabels = CHANNEL_LABELS;
   protected readonly pageSize = PAGE_SIZE;
@@ -125,28 +127,27 @@ export class OrdersPage {
    * changes.
    */
   private keepScrollPosition(): void {
-    const scroller = inject(ViewportScroller);
     const position = this.store.takeSavedScroll();
     if (position !== null) {
       const resume = (): void => {
-        scroller.scrollToPosition([...position], { behavior: 'instant' });
+        this.scroller.scrollToPosition([...position], { behavior: 'instant' });
       };
       afterNextRender({ write: resume });
       this.router.events
         .pipe(
           filter((event) => event instanceof Scroll),
           take(1),
-          takeUntilDestroyed(),
+          takeUntilDestroyed(this.destroyRef),
         )
         .subscribe(resume);
     }
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationStart),
-        takeUntilDestroyed(),
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe(() => {
-        this.store.saveScroll(scroller.getScrollPosition());
+        this.store.saveScroll(this.scroller.getScrollPosition());
       });
   }
 }

@@ -198,7 +198,8 @@ function validCountry(value: string | null): string | null {
   return value !== null && COUNTRY_PATTERN.test(value) ? value.toUpperCase() : null;
 }
 
-function validId(value: string | null): number | null {
+/** A positive whole number that a JavaScript number holds exactly, such as a database id. */
+export function validId(value: string | null): number | null {
   if (value === null || !ID_PATTERN.test(value)) {
     return null;
   }

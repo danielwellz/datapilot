@@ -7,11 +7,10 @@ import { catchError, throwError } from 'rxjs';
 import { ApiError, parseApiError } from '../../core/api/api-error';
 import { RelativeTimePipe, UtcDatePipe, UtcDateTimePipe } from '../../shared/format/format.pipes';
 import { Money } from '../../shared/format/money';
+import { validId } from './order-filters';
 import { CHANNEL_LABELS, countryName } from './order-labels';
 import { OrderStatusLabel } from './order-status';
 import { OrdersApi } from './orders-api';
-
-const ID_PATTERN = /^[1-9]\d*$/;
 
 /**
  * One order: its summary, customer and items. The list's query string rides
@@ -40,7 +39,6 @@ export class OrderDetailPage {
   protected readonly countryName = countryName;
   protected readonly now = new Date();
 
-  /** Null for an id no order can have, which is answered without a request. */
   /** The list with the filters it had, which this page's URL carries. */
   protected readonly listUrl = computed(() =>
     this.router.serializeUrl(
@@ -48,11 +46,8 @@ export class OrderDetailPage {
     ),
   );
 
-  protected readonly orderId = computed(() => {
-    const id = this.id();
-    const number = Number(id);
-    return ID_PATTERN.test(id) && Number.isSafeInteger(number) ? number : null;
-  });
+  /** Null for an id no order can have, which is answered without a request. */
+  protected readonly orderId = computed(() => validId(this.id()));
 
   protected readonly order = rxResource({
     params: () => this.orderId() ?? undefined,

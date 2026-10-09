@@ -8,7 +8,7 @@ import { SKIP_ERROR_TOAST } from '../../core/http/error.interceptor';
 export const ORDERS_URL = '/api/orders';
 
 /** The orders pages show every failure in place, so these requests raise no toast. */
-function pageReported(): HttpContext {
+function withoutToast(): HttpContext {
   return new HttpContext().set(SKIP_ERROR_TOAST, true);
 }
 
@@ -20,12 +20,12 @@ export class OrdersApi {
   list(query: OrderListQuery): Observable<OrderPageOut> {
     return this.http.get<OrderPageOut>(ORDERS_URL, {
       params: toHttpParams(query),
-      context: pageReported(),
+      context: withoutToast(),
     });
   }
 
   get(id: number): Observable<OrderOut> {
-    return this.http.get<OrderOut>(`${ORDERS_URL}/${String(id)}`, { context: pageReported() });
+    return this.http.get<OrderOut>(`${ORDERS_URL}/${String(id)}`, { context: withoutToast() });
   }
 }
 
