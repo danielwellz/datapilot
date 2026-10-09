@@ -16,6 +16,21 @@
   min-height: 681px;
 }
 
+// At phone widths headers wrap and the heatmap's notes take more lines.
+@media (max-width: 599.98px) {
+  .deferred--revenue {
+    min-height: 474px;
+  }
+
+  .deferred--products {
+    min-height: 490px;
+  }
+
+  .deferred--cohorts {
+    min-height: 797px;
+  }
+}
+
 // The rankings side by side when both fit, stacked otherwise.
 .pair {
   display: grid;
