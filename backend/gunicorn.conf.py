@@ -1,6 +1,7 @@
 """Gunicorn settings for the backend image. Sizes come from the environment."""
 
 import os
+from pathlib import Path
 
 from app.logging import gunicorn_log_config
 
@@ -22,8 +23,11 @@ keepalive = 75
 max_requests = 2000
 max_requests_jitter = 200
 # The heartbeat file lives in memory, not on the container's disk, as
-# Gunicorn's docs advise for containers. No data is written there.
-worker_tmp_dir = "/dev/shm"  # noqa: S108
+# Gunicorn's docs advise for containers. No data is written there. Outside
+# Linux (gunicorn run directly on a Mac for a benchmark) there is no
+# /dev/shm, and Gunicorn's default temporary directory is used.
+_SHARED_MEMORY = "/dev/shm"  # noqa: S108
+worker_tmp_dir = _SHARED_MEMORY if Path(_SHARED_MEMORY).is_dir() else None
 # The runtime control socket (gunicornc) is not used: the container's
 # orchestrator starts, scales and stops the server.
 control_socket_disable = True
