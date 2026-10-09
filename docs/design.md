@@ -152,6 +152,17 @@ At phone widths the navigation becomes a second row of three equal tabs instead 
 - Errors say what happened and what to do: "Email or password is incorrect." rather than "Error 401".
 - Loading, empty and error states use specific words: "No orders match these filters." with a way to clear them.
 
+## Data conventions
+
+These rules make the same value read the same way on every screen. The formatting lives in `frontend/src/app/shared/format/`.
+
+- **Money is US dollars.** The sales data has no currency of its own, so every amount is shown as USD: `$1,234.50`, with grouping and two decimals. The `$` is set in graphite, like other units. A negative amount uses a true minus sign: `−$5.00`. Amounts are formatted from the API's decimal string, never through a JavaScript number, so large values keep every cent.
+- **Times are UTC.** The API's date filters are UTC calendar days, so times are shown in UTC too, and column headers and labels say so ("Placed (UTC)"). Showing local time would put an order placed at 23:30 UTC on a different day than the filter that finds it. Dates read `Mar 1, 2026`; times use a 24-hour clock: `Mar 1, 2026, 23:30`.
+- **Relative times help, never replace.** A table can add "3 days ago" next to the absolute date in graphite. It is hidden at phone widths, where the absolute date is enough.
+- **Order status is a word with a marker.** Paid is a filled dot, refunded a half-filled dot, cancelled an empty graphite ring. The markers differ in shape, not hue, because green and red mean "up" and "down" here. The word is always shown.
+- **Tables:** 32 px rows, 1 px rules, figures right-aligned. A table wider than the screen scrolls inside its sheet, never the page. The order number is the link to the detail page; the whole row is a click target for a mouse, while the keyboard has one stop per row.
+- **Lists without counts.** Keyset pagination has no total, so the orders list says what it shows ("Showing 50 orders. More match these filters.") and offers "Load 50 more" rather than page numbers.
+
 ## The query receipt (Stage 10)
 
 Each answer in Ask your data is presented as a query receipt: the question, the explanation, the SQL, the model that answered, the row count and the time, then the results. It is set in Plex Mono for SQL and metadata, ruled like a printed slip, with a perforated top edge.

@@ -1,0 +1,37 @@
+// Data tables, shared by every screen that lists rows of figures.
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-table);
+  line-height: var(--leading-table);
+
+  th,
+  td {
+    height: var(--row-height);
+    padding: 0 var(--space-3);
+    border-bottom: 1px solid var(--color-rule);
+    text-align: left;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  thead th {
+    color: var(--color-graphite);
+    font-weight: var(--weight-medium);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  // Figures line up on the right; the typeface makes every digit equally wide.
+  .data-table__number {
+    text-align: right;
+  }
+}
+
+// A table wider than the screen scrolls inside its sheet, never the page.
+.table-scroll {
+  overflow-x: auto;
+}

@@ -1,0 +1,138 @@
+<section class="page" aria-labelledby="order-title">
+  <a class="back" [href]="listUrl()" (click)="backToList($event)">
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path
+        d="M10 3L5 8l5 5"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+    Back to orders
+  </a>
+
+  <header class="page__header">
+    <h1 id="order-title">Order {{ id() }}</h1>
+    @if (order.hasValue()) {
+      <p class="page__lead">
+        Placed
+        <time [attr.datetime]="order.value().created_at"
+          >{{ order.value().created_at | utcDateTime }} UTC</time
+        >, {{ order.value().created_at | relativeTime: now }}.
+      </p>
+    }
+  </header>
+
+  @if (notFound()) {
+    <div class="sheet state" role="alert">
+      <p class="state__title">There is no order {{ id() }}.</p>
+      <p>Check the order number, or go back to the list to find it.</p>
+    </div>
+  } @else if (failure(); as error) {
+    <div class="sheet state" role="alert">
+      <p class="state__title">Order {{ id() }} couldn't be loaded.</p>
+      <p>{{ error.message }}</p>
+      @if (error.requestId; as requestId) {
+        <p class="request-id">Request ID {{ requestId }}</p>
+      }
+      <button class="button" type="button" (click)="order.reload()">Try again</button>
+    </div>
+  } @else if (order.hasValue()) {
+    @let detail = order.value();
+    <div class="columns">
+      <section class="sheet" aria-labelledby="summary-title">
+        <h2 id="summary-title" class="sheet__title">Summary</h2>
+        <dl class="facts">
+          <div>
+            <dt>Status</dt>
+            <dd><dp-order-status [status]="detail.status" /></dd>
+          </div>
+          <div>
+            <dt>Channel</dt>
+            <dd>{{ channelLabels[detail.channel] }}</dd>
+          </div>
+          <div>
+            <dt>Items</dt>
+            <dd>{{ itemCount() }}</dd>
+          </div>
+          <div>
+            <dt>Total</dt>
+            <dd class="facts__figure"><dp-money [amount]="detail.total" /></dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="sheet" aria-labelledby="customer-title">
+        <h2 id="customer-title" class="sheet__title">Customer</h2>
+        <dl class="facts">
+          <div>
+            <dt>Name</dt>
+            <dd>{{ detail.customer.name }}</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd class="facts__email">{{ detail.customer.email }}</dd>
+          </div>
+          <div>
+            <dt>Country</dt>
+            <dd>{{ countryName(detail.customer.country) }} ({{ detail.customer.country }})</dd>
+          </div>
+          <div>
+            <dt>Customer since</dt>
+            <dd>
+              <time [attr.datetime]="detail.customer.signed_up_at">{{
+                detail.customer.signed_up_at | utcDate
+              }}</time>
+            </dd>
+          </div>
+        </dl>
+        <a [routerLink]="['/orders']" [queryParams]="{ customer_id: detail.customer.id }"
+          >All orders from {{ detail.customer.name }}</a
+        >
+      </section>
+    </div>
+
+    <section
+      class="sheet sheet--flush table-scroll"
+      role="region"
+      aria-labelledby="items-title"
+      tabindex="0"
+    >
+      <table class="data-table">
+        <caption id="items-title" class="items__caption">
+          Items
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Product</th>
+            <th scope="col">Category</th>
+            <th scope="col" class="data-table__number">Quantity</th>
+            <th scope="col" class="data-table__number">Unit price</th>
+            <th scope="col" class="data-table__number">Line total</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of detail.items; track item.product.id) {
+            <tr>
+              <td>{{ item.product.name }}</td>
+              <td>{{ item.product.category }}</td>
+              <td class="data-table__number">{{ item.quantity }}</td>
+              <td class="data-table__number"><dp-money [amount]="item.unit_price" /></td>
+              <td class="data-table__number"><dp-money [amount]="item.line_total" /></td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" colspan="4">Order total</th>
+            <td class="data-table__number"><dp-money [amount]="detail.total" /></td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+  } @else {
+    <p class="loading" role="status">Loading order {{ id() }}…</p>
+  }
+</section>

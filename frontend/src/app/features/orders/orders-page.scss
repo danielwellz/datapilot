@@ -1,0 +1,81 @@
+.summary {
+  min-height: var(--leading-body);
+  color: var(--color-graphite);
+}
+
+.orders {
+  transition: opacity var(--duration-state) var(--ease-out);
+}
+
+// Rows of the previous filters while the new ones load: visible, clearly not current.
+.orders--stale {
+  opacity: 0.45;
+}
+
+.orders__row {
+  // Anchors the order link's hit area, which covers the whole row.
+  position: relative;
+
+  &:hover {
+    background: var(--color-signal-tint);
+  }
+}
+
+.orders__link {
+  font-weight: var(--weight-medium);
+
+  // A mouse can click anywhere on the row; the keyboard still has one stop per row.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+}
+
+.orders__relative,
+.orders__country {
+  margin-left: var(--space-1);
+  color: var(--color-graphite);
+}
+
+.more,
+.more-failed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.more-failed {
+  justify-content: space-between;
+  padding: var(--space-3);
+  border-left: 3px solid var(--color-error);
+  background: var(--color-sheet);
+}
+
+.skeleton__bar {
+  display: inline-block;
+  width: 10rem;
+  height: 10px;
+  border-radius: var(--radius-control);
+  background: var(--color-rule);
+  animation: skeleton-pulse 1.2s var(--ease-out) infinite alternate;
+}
+
+.skeleton__bar--short {
+  width: 4rem;
+}
+
+@keyframes skeleton-pulse {
+  to {
+    opacity: 0.5;
+  }
+}
+
+@media (max-width: 767px) {
+  // The relative time repeats the date; narrow screens keep the date only.
+  .orders__relative {
+    display: none;
+  }
+}

@@ -5,7 +5,12 @@ import {
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
-import { TitleStrategy, provideRouter } from '@angular/router';
+import {
+  TitleStrategy,
+  provideRouter,
+  withComponentInputBinding,
+  withInMemoryScrolling,
+} from '@angular/router';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
@@ -16,7 +21,13 @@ import { PageTitleStrategy } from './core/title/page-title.strategy';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter(
+      routes,
+      // Route parameters such as an order's `:id` arrive as component inputs.
+      withComponentInputBinding(),
+      // Back and forward return to the scroll position a page was left at.
+      withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
+    ),
     { provide: TitleStrategy, useClass: PageTitleStrategy },
     // The first interceptor is the outermost: it sees the final error, after
     // the auth interceptor has refreshed and retried.

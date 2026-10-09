@@ -22,3 +22,30 @@
   border-radius: var(--radius-sheet);
   background: var(--color-sheet);
 }
+
+// A sheet whose content (a table, for example) runs to its edges.
+.sheet--flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+// An empty, failed or missing result in place of a page's content.
+.state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+}
+
+.state__title {
+  font-weight: var(--weight-semibold);
+}
+
+// The id support needs to find a failed request in the logs.
+.request-id {
+  color: var(--color-graphite);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}

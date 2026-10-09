@@ -1,0 +1,148 @@
+<section class="page" aria-labelledby="orders-title">
+  <header class="page__header">
+    <h1 id="orders-title">Orders</h1>
+    <p class="page__lead">Every order, filtered by status, country, channel, date and total.</p>
+  </header>
+
+  <dp-order-filter-bar [filters]="store.filters()" (filtersChange)="showFilters($event)" />
+
+  <p class="summary" role="status">{{ summary() }}</p>
+
+  @switch (view()) {
+    @case ('failed') {
+      <div class="sheet state" role="alert">
+        <p class="state__title">The orders couldn't be loaded.</p>
+        <p>{{ store.error()?.message }}</p>
+        @if (store.error()?.requestId; as requestId) {
+          <p class="request-id">Request ID {{ requestId }}</p>
+        }
+        <button class="button" type="button" (click)="store.retry()">Try again</button>
+      </div>
+    }
+    @case ('empty') {
+      <div class="sheet state">
+        @if (filtered()) {
+          <p>Try removing a filter or widening the date range.</p>
+          <button class="button" type="button" (click)="clearFilters()">Clear filters</button>
+        } @else {
+          <p>Orders appear here once the sales data is loaded.</p>
+        }
+      </div>
+    }
+    @case ('skeleton') {
+      <div class="sheet sheet--flush" aria-hidden="true">
+        <table class="data-table skeleton">
+          <tbody>
+            @for (row of skeletonRows; track row) {
+              <tr>
+                <td><span class="skeleton__bar skeleton__bar--short"></span></td>
+                <td><span class="skeleton__bar"></span></td>
+                <td><span class="skeleton__bar"></span></td>
+                <td><span class="skeleton__bar skeleton__bar--short"></span></td>
+                <td class="data-table__number">
+                  <span class="skeleton__bar skeleton__bar--short"></span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @default {
+      <div
+        class="sheet sheet--flush table-scroll"
+        role="region"
+        aria-labelledby="orders-caption"
+        tabindex="0"
+      >
+        <table
+          class="data-table orders"
+          [class.orders--stale]="store.isStale()"
+          [attr.aria-busy]="store.isStale()"
+        >
+          <caption id="orders-caption" class="visually-hidden">
+            Orders,
+            {{
+              store.filters().sort === 'total' ? 'highest total first' : 'newest first'
+            }}
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Order</th>
+              <th
+                scope="col"
+                [attr.aria-sort]="store.filters().sort === 'created_at' ? 'descending' : null"
+              >
+                Placed (UTC)
+              </th>
+              <th scope="col">Customer</th>
+              <th scope="col">Channel</th>
+              <th scope="col">Status</th>
+              <th
+                scope="col"
+                class="data-table__number"
+                [attr.aria-sort]="store.filters().sort === 'total' ? 'descending' : null"
+              >
+                Total
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (order of store.items(); track order.id) {
+              <tr class="orders__row">
+                <td>
+                  <a class="orders__link" [routerLink]="[order.id]" queryParamsHandling="preserve">
+                    {{ order.id }}
+                  </a>
+                </td>
+                <td>
+                  <time [attr.datetime]="order.created_at">{{
+                    order.created_at | utcDateTime
+                  }}</time
+                  >&ngsp;<span class="orders__relative">{{
+                    order.created_at | relativeTime: now
+                  }}</span>
+                </td>
+                <td>
+                  {{ order.customer.name }}
+                  <span class="orders__country">{{ order.customer.country }}</span>
+                </td>
+                <td>{{ channelLabels[order.channel] }}</td>
+                <td><dp-order-status [status]="order.status" /></td>
+                <td class="data-table__number"><dp-money [amount]="order.total" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (store.status() === 'more-failed') {
+        <div class="more-failed" role="alert">
+          <p>
+            More orders couldn't be loaded. {{ store.error()?.message }}
+            @if (store.error()?.requestId; as requestId) {
+              <span class="request-id">Request ID {{ requestId }}</span>
+            }
+          </p>
+          <button class="button" type="button" (click)="store.retry()">Try again</button>
+        </div>
+      } @else if (store.hasMore()) {
+        <div class="more">
+          <button
+            class="button"
+            type="button"
+            [disabled]="store.status() !== 'loaded'"
+            [attr.aria-busy]="store.status() === 'loading-more'"
+            (click)="store.loadMore()"
+          >
+            {{
+              store.status() === 'loading-more'
+                ? 'Loading more orders…'
+                : 'Load ' + pageSize + ' more'
+            }}
+          </button>
+        </div>
+      }
+    }
+  }
+</section>
