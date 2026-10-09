@@ -11,6 +11,7 @@ from dotenv import dotenv_values
 from flask import current_app
 from pydantic import (
     FilePath,
+    NonNegativeInt,
     PositiveInt,
     PostgresDsn,
     RedisDsn,
@@ -79,6 +80,10 @@ class Settings(BaseSettings):
     jwt_refresh_ttl_days: PositiveInt = 7
 
     log_level: LogLevel = "INFO"
+    # Reverse proxies in front of the app that append to X-Forwarded-For. The
+    # client address is read that many hops from the end; with 0 the header
+    # is ignored, since any client can send it.
+    trusted_proxy_hops: NonNegativeInt = 0
     # Per statement, for requests only: no API query comes close (the slowest
     # measured p95 is under 0.5 s at full scale), so a statement this slow is
     # an unmeasured filter combination or a request the client gave up on.
