@@ -1,0 +1,182 @@
+<form
+  class="filters"
+  role="search"
+  aria-label="Filter orders"
+  [formGroup]="form"
+  (ngSubmit)="apply()"
+>
+  <fieldset class="filters__group" formGroupName="statuses">
+    <legend class="field__label">Status</legend>
+    <div class="filters__checks">
+      @for (status of statuses; track status) {
+        <label class="check">
+          <input type="checkbox" [formControlName]="status" />
+          {{ statusLabels[status] }}
+        </label>
+      }
+    </div>
+  </fieldset>
+
+  <div class="field">
+    <label class="field__label" for="filter-country">Country</label>
+    <select
+      id="filter-country"
+      class="input"
+      formControlName="country"
+      [attr.aria-describedby]="meta().status === 'failed' ? 'filter-country-error' : null"
+    >
+      <option value="">
+        {{ meta().status === 'loading' ? 'Loading countries…' : 'All countries' }}
+      </option>
+      @for (country of countries(); track country.code) {
+        <option [value]="country.code">{{ country.name }}</option>
+      }
+    </select>
+    @if (meta().status === 'failed') {
+      <p id="filter-country-error" class="field__error filters__meta-error">
+        Countries couldn't be loaded.
+        <button
+          class="button button--quiet filters__inline-button"
+          type="button"
+          (click)="retryMeta()"
+        >
+          Try again
+        </button>
+      </p>
+    }
+  </div>
+
+  <div class="field">
+    <label class="field__label" for="filter-channel">Channel</label>
+    <select id="filter-channel" class="input" formControlName="channel">
+      <option value="">All channels</option>
+      @for (channel of channels; track channel) {
+        <option [value]="channel">{{ channelLabels[channel] }}</option>
+      }
+    </select>
+  </div>
+
+  <fieldset
+    class="filters__group"
+    [attr.aria-describedby]="rangeError('date') ? 'filter-date-error' : null"
+  >
+    <legend class="field__label">Placed (UTC)</legend>
+    <div class="filters__range">
+      <div class="field">
+        <label class="field__hint" for="filter-date-from">From</label>
+        <input
+          id="filter-date-from"
+          class="input"
+          type="date"
+          formControlName="dateFrom"
+          [attr.min]="firstDay()"
+          [attr.max]="lastDay()"
+          [attr.aria-invalid]="errorFor('dateFrom') !== null || rangeError('date') !== null"
+          [attr.aria-describedby]="errorFor('dateFrom') ? 'filter-date-from-error' : null"
+        />
+      </div>
+      <div class="field">
+        <label class="field__hint" for="filter-date-to">To</label>
+        <input
+          id="filter-date-to"
+          class="input"
+          type="date"
+          formControlName="dateTo"
+          [attr.min]="firstDay()"
+          [attr.max]="lastDay()"
+          [attr.aria-invalid]="errorFor('dateTo') !== null || rangeError('date') !== null"
+          [attr.aria-describedby]="errorFor('dateTo') ? 'filter-date-to-error' : null"
+        />
+      </div>
+    </div>
+    @if (errorFor('dateFrom'); as message) {
+      <p id="filter-date-from-error" class="field__error">{{ message }}</p>
+    }
+    @if (errorFor('dateTo'); as message) {
+      <p id="filter-date-to-error" class="field__error">{{ message }}</p>
+    }
+    @if (rangeError('date'); as message) {
+      <p id="filter-date-error" class="field__error">{{ message }}</p>
+    }
+  </fieldset>
+
+  <fieldset
+    class="filters__group"
+    [attr.aria-describedby]="rangeError('total') ? 'filter-total-error' : null"
+  >
+    <legend class="field__label">Total (USD)</legend>
+    <div class="filters__range">
+      <div class="field">
+        <label class="field__hint" for="filter-min-total">Min</label>
+        <input
+          id="filter-min-total"
+          class="input filters__amount"
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          formControlName="minTotal"
+          [attr.aria-invalid]="errorFor('minTotal') !== null || rangeError('total') !== null"
+          [attr.aria-describedby]="errorFor('minTotal') ? 'filter-min-total-error' : null"
+        />
+      </div>
+      <div class="field">
+        <label class="field__hint" for="filter-max-total">Max</label>
+        <input
+          id="filter-max-total"
+          class="input filters__amount"
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          formControlName="maxTotal"
+          [attr.aria-invalid]="errorFor('maxTotal') !== null || rangeError('total') !== null"
+          [attr.aria-describedby]="errorFor('maxTotal') ? 'filter-max-total-error' : null"
+        />
+      </div>
+    </div>
+    @if (errorFor('minTotal'); as message) {
+      <p id="filter-min-total-error" class="field__error">{{ message }}</p>
+    }
+    @if (errorFor('maxTotal'); as message) {
+      <p id="filter-max-total-error" class="field__error">{{ message }}</p>
+    }
+    @if (rangeError('total'); as message) {
+      <p id="filter-total-error" class="field__error">{{ message }}</p>
+    }
+  </fieldset>
+
+  <div class="field">
+    <label class="field__label" for="filter-sort">Sort by</label>
+    <select id="filter-sort" class="input" formControlName="sort">
+      <option value="created_at">Newest first</option>
+      <option value="total">Highest total first</option>
+    </select>
+  </div>
+
+  <div class="filters__footer">
+    @if (customerId(); as id) {
+      <span class="chip">
+        Customer {{ id }}
+        <button
+          class="chip__remove"
+          type="button"
+          [attr.aria-label]="'Remove the filter for customer ' + id"
+          (click)="removeCustomer()"
+        >
+          <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+            <path
+              d="M4 4l8 8M12 4l-8 8"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </span>
+    }
+    @if (filtered()) {
+      <button class="button button--quiet" type="button" (click)="clear()">Clear filters</button>
+    }
+    <!-- Lets Enter in a text field submit the form; the list updates without it. -->
+    <button class="visually-hidden" type="submit" tabindex="-1">Apply filters</button>
+  </div>
+</form>

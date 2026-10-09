@@ -6,6 +6,7 @@ import { map } from 'rxjs';
 import { LOCALE } from '../../shared/format/format';
 import { RelativeTimePipe, UtcDateTimePipe } from '../../shared/format/format.pipes';
 import { Money } from '../../shared/format/money';
+import { OrderFilterBar } from './order-filter-bar';
 import { CHANNEL_LABELS } from './order-labels';
 import {
   NO_FILTERS,
@@ -29,7 +30,7 @@ const SKELETON_ROWS = 10;
  */
 @Component({
   selector: 'dp-orders-page',
-  imports: [RouterLink, Money, OrderStatusLabel, UtcDateTimePipe, RelativeTimePipe],
+  imports: [RouterLink, Money, OrderFilterBar, OrderStatusLabel, UtcDateTimePipe, RelativeTimePipe],
   templateUrl: './orders-page.html',
   styleUrl: './orders-page.scss',
 })

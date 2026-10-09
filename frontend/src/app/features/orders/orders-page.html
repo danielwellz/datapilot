@@ -4,6 +4,8 @@
     <p class="page__lead">Every order, filtered by status, country, channel, date and total.</p>
   </header>
 
+  <dp-order-filter-bar [filters]="store.filters()" (filtersChange)="showFilters($event)" />
+
   <p class="summary" role="status">{{ summary() }}</p>
 
   @switch (view()) {

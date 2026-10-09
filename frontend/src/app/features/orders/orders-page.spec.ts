@@ -9,6 +9,8 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { META_URL } from '../../core/api/meta.service';
+import { metaOut } from '../../core/api/testing';
 import { textOf } from '../../shared/forms/testing';
 import { ORDERS_URL } from './orders-api';
 import { OrdersPage } from './orders-page';
@@ -55,6 +57,7 @@ describe('OrdersPage', () => {
       throw new Error(`Nothing rendered at ${url}`);
     }
     page = element;
+    http.expectOne(META_URL).flush(metaOut());
   }
 
   function expectList(): TestRequest {
@@ -167,6 +170,26 @@ describe('OrdersPage', () => {
     expect(page.querySelector('table.orders')?.classList).not.toContain('orders--stale');
   });
 
+  it('puts a filter change in the URL, replacing the history entry', async () => {
+    await open('/orders?sort=total');
+    expectList().flush(orderPage([1]));
+    await settle();
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigate');
+
+    const channel = page.querySelector<HTMLSelectElement>('#filter-channel');
+    if (channel === null) {
+      throw new Error('No channel filter');
+    }
+    channel.value = 'web';
+    channel.dispatchEvent(new Event('change'));
+    await settle();
+
+    expect(router.url).toBe('/orders?channel=web&sort=total');
+    expect(navigate.mock.calls[0]?.[1]).toMatchObject({ replaceUrl: true });
+    expect(expectList().request.params.get('channel')).toBe('web');
+  });
+
   it('offers to clear the filters when nothing matches, keeping the sort', async () => {
     await open('/orders?country=DK&min_total=5000&sort=total');
     expectList().flush(orderPage([]));
@@ -187,7 +210,7 @@ describe('OrdersPage', () => {
 
     expect(textOf(page, '[role="status"]')).toBe('There are no orders yet.');
     expect(page.textContent).toContain('Orders appear here once the sales data is loaded.');
-    expect(page.querySelector('button')).toBeNull();
+    expect(page.querySelector('.state button')).toBeNull();
   });
 
   it('explains a failed load with the request id and tries again', async () => {
