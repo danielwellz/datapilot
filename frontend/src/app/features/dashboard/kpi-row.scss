@@ -44,6 +44,11 @@
   container-type: inline-size;
 }
 
+.kpi__figure,
+.kpi__change {
+  margin: 0;
+}
+
 .kpi__label {
   color: var(--color-graphite);
   font-weight: var(--weight-medium);
