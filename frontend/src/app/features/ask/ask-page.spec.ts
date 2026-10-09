@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, DeferBlockBehavior, TestBed } from '@angular/core/testing';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { userOut } from '../../core/auth/testing';
@@ -18,6 +18,9 @@ describe('AskPage', () => {
 
   beforeEach(async () => {
     TestBed.configureTestingModule({
+      // Receipts with a chart defer it until it is in view, and jsdom has no
+      // IntersectionObserver; the chart itself is tested in query-receipt.spec.
+      deferBlockBehavior: DeferBlockBehavior.Manual,
       providers: [
         AskStore,
         provideHttpClient(),

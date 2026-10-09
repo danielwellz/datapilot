@@ -155,9 +155,21 @@ describe('OrderDetailPage', () => {
     http.expectOne(`${ORDERS_URL}/42`).flush(orderOut());
     await settle();
 
-    const event = clickBack({ metaKey: true });
-    // jsdom would follow the link itself; the page must not have handled it.
-    expect(event.defaultPrevented).toBe(false);
+    // Read after the page's own handlers on the link, then stop jsdom from
+    // following it: jsdom cannot open another document.
+    let preventedByPage: boolean | null = null;
+    document.addEventListener(
+      'click',
+      (event) => {
+        preventedByPage = event.defaultPrevented;
+        event.preventDefault();
+      },
+      { once: true },
+    );
+
+    clickBack({ metaKey: true });
+
+    expect(preventedByPage).toBe(false);
   });
 
   it('says there is no such order on a 404', async () => {
