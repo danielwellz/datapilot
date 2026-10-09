@@ -3,6 +3,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 BACKEND := backend
+FRONTEND := frontend
 # Flask's default port 5000 is taken by AirPlay Receiver on macOS.
 FLASK_PORT := 5001
 
@@ -15,7 +16,7 @@ runs ?= 10
 .PHONY: help up down logs reset-db \
 	be-install be-dev be-test be-lint be-format be-typecheck \
 	db-migrate db-upgrade db-roles seed explain explain-analytics eval-ask \
-	fe-install fe-dev fe-test fe-lint fe-build \
+	fe-install fe-dev fe-test fe-lint fe-format fe-build \
 	hooks check demo
 
 help: ## List available targets
@@ -83,29 +84,30 @@ eval-ask: ## Ask the golden questions of the enabled models; writes docs/ai-eval
 
 # --- Frontend -------------------------------------------------------------
 
-FRONTEND_PENDING = @echo "$@ is available from Stage 7 (Angular web foundation)."
+fe-install: ## Install frontend dependencies exactly as locked
+	cd $(FRONTEND) && npm ci
 
-fe-install: ## Install frontend dependencies
-	$(FRONTEND_PENDING)
+fe-dev: ## Run the Angular dev server on port 4200 (proxies /api to port 5001)
+	cd $(FRONTEND) && npx ng serve
 
-fe-dev: ## Run the Angular development server
-	$(FRONTEND_PENDING)
+fe-test: ## Run frontend unit tests once, with coverage
+	cd $(FRONTEND) && npx ng test --watch=false --coverage
 
-fe-test: ## Run frontend unit tests
-	$(FRONTEND_PENDING)
+fe-lint: ## Lint the frontend and check its formatting
+	cd $(FRONTEND) && npx ng lint && npx prettier --check .
 
-fe-lint: ## Lint the frontend
-	$(FRONTEND_PENDING)
+fe-format: ## Apply Prettier formatting to the frontend
+	cd $(FRONTEND) && npx prettier --write .
 
-fe-build: ## Build the frontend for production
-	$(FRONTEND_PENDING)
+fe-build: ## Build the frontend for production (includes the template type check)
+	cd $(FRONTEND) && npx ng build
 
 # --- Workflow -------------------------------------------------------------
 
 hooks: ## Install the git pre-commit hook
 	cd $(BACKEND) && uv run pre-commit install --hook-type pre-commit
 
-check: be-lint be-typecheck be-test ## Run every lint, type check and test suite
+check: be-lint be-typecheck be-test fe-lint fe-test fe-build ## Run every lint, type check and test suite
 
 demo: ## Run the full production-like stack
 	@echo "demo is available from Stage 11 (production readiness)."
