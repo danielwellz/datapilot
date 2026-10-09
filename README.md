@@ -6,19 +6,29 @@ This project is under active development. Full documentation will follow.
 
 ## Local development
 
-Prerequisites: Docker with Compose, [uv](https://docs.astral.sh/uv/), GNU Make.
+Prerequisites: Docker with Compose, [uv](https://docs.astral.sh/uv/), Node.js 24 LTS (the version is pinned in `frontend/.node-version`), GNU Make.
 
 ```bash
 cp .env.example .env
 make up          # PostgreSQL on localhost:5433, Redis on localhost:6379
 make be-install  # backend dependencies
-make check       # lint, type checks and tests
+make fe-install  # frontend dependencies
+make check       # lint, type checks and tests for both
 make be-dev      # API on http://localhost:5001
+make fe-dev      # web app on http://localhost:4200 (in a second terminal)
 ```
 
 With the API running, the interactive documentation is at <http://localhost:5001/api/docs> and the OpenAPI document at <http://localhost:5001/api/openapi.json>.
 
 Run `make help` to list every target.
+
+### Web app
+
+The Angular app runs at <http://localhost:4200>. Its dev server forwards `/api` to the API on port 5001, so the browser sees one origin, as it will in production. Log in with the demo account below or create an account.
+
+- **Design:** [docs/design.md](docs/design.md) holds the brief, the color, type, spacing and radius tokens with their contrast ratios, and the shell layout. Every token is a CSS custom property in `frontend/src/styles/_tokens.scss`, with light and dark values. The app follows the system theme until you pick one.
+- **Sessions:** the access token lives only in memory. The refresh token is an httpOnly cookie that the app never reads ([ADR 0003](docs/adr/0003-authentication-tokens.md)). A reload restores the session with one refresh call before the first page renders. When a request gets a 401, the app refreshes once, however many requests failed at the same moment, retries them, and sends you to log in only if the server rejects the refresh token.
+- **Checks:** `make fe-lint` (ESLint and Prettier), `make fe-test` (Vitest, with coverage) and `make fe-build`.
 
 ### Sample data
 
