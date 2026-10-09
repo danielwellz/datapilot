@@ -5,7 +5,7 @@ not allow nesting once ``api`` has been registered on an application, and
 the app factory registers it on every app it builds.
 """
 
-from flask import Blueprint, Flask, request
+from flask import Blueprint, Flask, Response, request
 
 from app.api.ai import ai
 from app.api.analytics import analytics
@@ -17,6 +17,14 @@ from app.api.system import system
 from app.errors import BadRequest, UnsupportedMediaType
 
 _METHODS_WITH_BODY = frozenset({"POST", "PUT", "PATCH"})
+
+# JSON is never a page: a browser must not render, frame or sniff it. A
+# response that is a page (the Swagger UI) sets its own policy first.
+_SECURITY_HEADERS = {
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+}
 
 api = Blueprint("api", __name__, url_prefix="/api")
 api.register_blueprint(ai)
@@ -46,7 +54,14 @@ def require_json_body() -> None:
         raise BadRequest("The request body is not valid JSON.")
 
 
+def add_security_headers(response: Response) -> Response:
+    for name, value in _SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    return response
+
+
 def register_blueprints(app: Flask) -> None:
-    """Register the API and the JSON-only body policy that applies to every endpoint."""
+    """Register the API, its JSON-only body policy and the headers of every response."""
     app.before_request(require_json_body)
+    app.after_request(add_security_headers)
     app.register_blueprint(api)

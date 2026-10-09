@@ -1,3 +1,6 @@
+import base64
+import hashlib
+import re
 import tomllib
 from collections.abc import Iterator
 from pathlib import Path
@@ -6,6 +9,7 @@ from typing import Any
 import pytest
 from flask.testing import FlaskClient
 
+from app.api.docs import SWAGGER_UI_ASSETS
 from app.api.spec import API_VERSION, spec
 
 
@@ -54,3 +58,31 @@ def test_api_version_matches_the_backend_package_version() -> None:
     pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
 
     assert tomllib.loads(pyproject.read_text())["project"]["version"] == API_VERSION
+
+
+def test_json_responses_tell_browsers_not_to_render_frame_or_sniff_them(
+    client: FlaskClient,
+) -> None:
+    for response in (client.get("/api/health"), client.get("/api/missing")):
+        assert response.headers["Content-Security-Policy"] == (
+            "default-src 'none'; frame-ancestors 'none'"
+        )
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert response.headers["Referrer-Policy"] == "no-referrer"
+
+
+def test_docs_page_policy_allows_its_inline_script_and_the_pinned_assets_only(
+    client: FlaskClient,
+) -> None:
+    response = client.get("/api/docs")
+    page = response.get_data(as_text=True)
+    policy = response.headers["Content-Security-Policy"]
+
+    (script,) = re.findall(r"<script>(.*?)</script>", page, re.DOTALL)
+    digest = base64.b64encode(hashlib.sha256(script.encode()).digest()).decode()
+    assert f"script-src {SWAGGER_UI_ASSETS} 'sha256-{digest}';" in policy
+    assert "frame-ancestors 'none'" in policy
+    # If spectree moves to another Swagger UI version, the policy must follow.
+    external = re.findall(r'(?:src|href)="(https?://[^"]+)"', page)
+    assert external
+    assert all(url.startswith(SWAGGER_UI_ASSETS) for url in external)
