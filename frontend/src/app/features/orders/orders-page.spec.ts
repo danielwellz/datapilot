@@ -75,10 +75,11 @@ describe('OrdersPage', () => {
     );
   }
 
+  /** A button in the page's content, outside the filter bar. */
   function button(label: string): HTMLButtonElement {
-    const match = [...page.querySelectorAll('button')].find(
-      (candidate) => candidate.textContent.trim() === label,
-    );
+    const match = [...page.querySelectorAll('button')]
+      .filter((candidate) => candidate.closest('dp-order-filter-bar') === null)
+      .find((candidate) => candidate.textContent.trim() === label);
     if (match === undefined) {
       throw new Error(`No button labelled "${label}"`);
     }
@@ -210,6 +211,7 @@ describe('OrdersPage', () => {
     await settle();
 
     expect(textOf(page, '[role="status"]')).toBe('There are no orders yet.');
+    expect(page.querySelector('.state')?.textContent).not.toContain('Clear filters');
     expect(page.textContent).toContain('Orders appear here once the sales data is loaded.');
     expect(page.querySelector('.state button')).toBeNull();
   });
