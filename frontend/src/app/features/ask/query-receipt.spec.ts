@@ -1,9 +1,16 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+  ComponentFixture,
+  DeferBlockBehavior,
+  DeferBlockState,
+  TestBed,
+} from '@angular/core/testing';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { ChartConfig } from '../../shared/chart/chart-config';
+import { provideFakeCharts } from '../../shared/chart/testing';
 import { userOut } from '../../core/auth/testing';
 import { AskStore, ThreadEntry } from './ask.store';
 import { QueryReceipt, receiptNumber, rowsText } from './query-receipt';
@@ -45,10 +52,14 @@ describe('receiptNumber and rowsText', () => {
 describe('QueryReceipt', () => {
   let fixture: ComponentFixture<Host>;
   let element: HTMLElement;
+  let drawn: ChartConfig[];
 
   async function render(entry: ThreadEntry): Promise<void> {
+    drawn = [];
     TestBed.configureTestingModule({
+      deferBlockBehavior: DeferBlockBehavior.Manual,
       providers: [
+        provideFakeCharts(drawn),
         AskStore,
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -159,6 +170,39 @@ describe('QueryReceipt', () => {
     expect(text('.receipt__section:last-child .receipt__note')).toBe(
       'Showing the first 1,000 rows, the most one answer returns. More rows matched: ask for fewer, for example a top 10 or a shorter period.',
     );
+  });
+
+  it('draws the chart the model suggested once it is in view', async () => {
+    await render(answered());
+    expect(element.querySelector('.receipt__chart-placeholder')).not.toBeNull();
+    expect(drawn).toHaveLength(0);
+
+    for (const block of await fixture.getDeferBlocks()) {
+      await block.render(DeferBlockState.Complete);
+    }
+
+    expect(drawn).toHaveLength(1);
+    expect(drawn[0]?.type).toBe('line');
+    expect(drawn[0]?.data.labels).toEqual(['Aug 2026', 'Sep 2026']);
+  });
+
+  it('draws no chart when the shape does not fit the suggestion', async () => {
+    await render(
+      answered({
+        chart: 'line',
+        columns: [
+          { name: 'country', type: 'string' },
+          { name: 'revenue', type: 'number' },
+        ],
+        rows: [
+          ['DE', '1'],
+          ['GB', '2'],
+        ],
+      }),
+    );
+
+    expect(element.querySelector('.receipt__chart-placeholder')).toBeNull();
+    expect(await fixture.getDeferBlocks()).toHaveLength(0);
   });
 
   it('shows a pending question with the model asked and the seconds so far', async () => {

@@ -37,6 +37,10 @@ const compactMoney = new Intl.NumberFormat(LOCALE, {
   maximumFractionDigits: 1,
 });
 const seconds = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 });
+const compactNumber = new Intl.NumberFormat(LOCALE, {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
 const relative = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' });
 const regions = new Intl.DisplayNames([LOCALE], { type: 'region' });
 
@@ -112,6 +116,11 @@ export function formatDecimal(value: string | number): string {
 export function formatDuration(milliseconds: number): string {
   const rounded = Math.round(milliseconds);
   return rounded < 1000 ? `${String(rounded)} ms` : `${seconds.format(rounded / 1000)} s`;
+}
+
+/** A number for a chart axis, in a short form: `"7.5M"`. */
+export function formatCompactNumber(value: number): string {
+  return withMinus(compactNumber.format(value));
 }
 
 /** An amount for a chart axis, where the exact cents would be noise: `"$7.5M"`. */

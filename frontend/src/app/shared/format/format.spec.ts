@@ -6,6 +6,7 @@ import {
   countryName,
   formatChange,
   formatCompactMoney,
+  formatCompactNumber,
   formatCount,
   formatDecimal,
   formatDuration,
@@ -75,6 +76,12 @@ describe('formatting', () => {
       expect(formatDecimal('-5.50')).toBe('−5.50');
       expect(formatDecimal(42)).toBe('42');
       expect(formatDecimal(0.25)).toBe('0.25');
+    });
+
+    it('shortens a number for a chart axis', () => {
+      expect(formatCompactNumber(7_512_345.67)).toBe('7.5M');
+      expect(formatCompactNumber(950)).toBe('950');
+      expect(formatCompactNumber(-1200)).toBe('−1.2K');
     });
 
     it('formats a duration in milliseconds below a second and in seconds above', () => {

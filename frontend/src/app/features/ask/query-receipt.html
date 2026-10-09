@@ -66,6 +66,14 @@
     </div>
 
     <div class="receipt__section">
+      @if (chart(); as chart) {
+        <!-- Chart.js loads only once a receipt with a chart is in view. -->
+        @defer (on viewport; prefetch on idle) {
+          <dp-chart [spec]="chart.spec" [height]="chart.height" />
+        } @placeholder {
+          <div class="receipt__chart-placeholder" [style.height.px]="chart.height"></div>
+        }
+      }
       <dp-result-table
         [columns]="answer.columns"
         [rows]="answer.rows"

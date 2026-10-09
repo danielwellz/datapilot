@@ -1,6 +1,8 @@
 import { Component, computed, inject, input } from '@angular/core';
 
+import { ChartView } from '../../shared/chart/chart';
 import { formatCount, formatDuration, formatUtcDateTime } from '../../shared/format/format';
+import { answerChart } from './answer-chart';
 import { AskStore, ThreadEntry, auditIdOf } from './ask.store';
 import { ReceiptSql } from './receipt-sql';
 import { ResultTable } from './result-table';
@@ -25,7 +27,7 @@ export function rowsText(rowCount: number, truncated: boolean): string {
  */
 @Component({
   selector: 'dp-query-receipt',
-  imports: [ReceiptSql, ResultTable],
+  imports: [ChartView, ReceiptSql, ResultTable],
   templateUrl: './query-receipt.html',
   styleUrl: './query-receipt.scss',
 })
@@ -39,6 +41,11 @@ export class QueryReceipt {
   protected readonly answer = computed(() => {
     const state = this.state();
     return state.kind === 'answered' ? state.answer : null;
+  });
+  /** Drawn only when the model suggested a chart and the result's shape fits it. */
+  protected readonly chart = computed(() => {
+    const answer = this.answer();
+    return answer === null ? null : answerChart(answer);
   });
 
   protected readonly number = computed(() => {
