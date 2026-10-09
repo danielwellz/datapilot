@@ -1,7 +1,8 @@
-import { Component, computed, inject } from '@angular/core';
+import { ViewportScroller } from '@angular/common';
+import { Component, afterNextRender, computed, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { map } from 'rxjs';
+import { ActivatedRoute, NavigationStart, Router, RouterLink, Scroll } from '@angular/router';
+import { filter, map, take } from 'rxjs';
 
 import { LOCALE } from '../../shared/format/format';
 import { RelativeTimePipe, UtcDateTimePipe } from '../../shared/format/format.pipes';
@@ -92,6 +93,7 @@ export class OrdersPage {
       .subscribe((filters) => {
         this.store.applyFilters(filters);
       });
+    this.keepScrollPosition();
   }
 
   /** Clears every filter but keeps the sort. */
@@ -108,6 +110,43 @@ export class OrdersPage {
       relativeTo: this.route,
       queryParams: filtersToParams(filters),
       replaceUrl: true,
+      // Stay where the user is: the filter they changed may be far down the bar.
+      scroll: 'manual',
     });
+  }
+
+  /**
+   * Back from an order, the store still holds the rows, so the page returns
+   * to where it was. The router's own restoration is not enough: it can
+   * scroll before this page has rendered its rows, and the browser clamps
+   * the position to the short page. So the position is applied after this
+   * page's first render and again after the router's scroll, whichever
+   * comes last. It is saved when a navigation starts, before the page
+   * changes.
+   */
+  private keepScrollPosition(): void {
+    const scroller = inject(ViewportScroller);
+    const position = this.store.takeSavedScroll();
+    if (position !== null) {
+      const resume = (): void => {
+        scroller.scrollToPosition([...position], { behavior: 'instant' });
+      };
+      afterNextRender({ write: resume });
+      this.router.events
+        .pipe(
+          filter((event) => event instanceof Scroll),
+          take(1),
+          takeUntilDestroyed(),
+        )
+        .subscribe(resume);
+    }
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationStart),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => {
+        this.store.saveScroll(scroller.getScrollPosition());
+      });
   }
 }

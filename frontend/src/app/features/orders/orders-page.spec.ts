@@ -1,3 +1,4 @@
+import { ViewportScroller } from '@angular/common';
 import { Component } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import {
@@ -246,5 +247,38 @@ describe('OrdersPage', () => {
 
     button('Try again').click();
     expect(expectList().request.params.get('cursor')).toBe('c1');
+  });
+
+  it('resumes where the list was when it returns to the same rows', async () => {
+    const scroller = TestBed.inject(ViewportScroller);
+    vi.spyOn(scroller, 'getScrollPosition').mockReturnValue([0, 640]);
+    const scrollTo = vi.spyOn(scroller, 'scrollToPosition').mockImplementation(() => undefined);
+    await open('/orders?status=paid');
+    expectList().flush(orderPage([5, 4], 'c1'));
+    await settle();
+
+    await harness.navigateByUrl('/orders/5?status=paid');
+    await harness.navigateByUrl('/orders?status=paid');
+    await settle();
+
+    http.expectNone(ORDERS_URL);
+    expect(rowIds()).toEqual(['5', '4']);
+    expect(scrollTo).toHaveBeenCalledWith([0, 640], { behavior: 'instant' });
+  });
+
+  it('starts at the top when it returns to different filters', async () => {
+    const scroller = TestBed.inject(ViewportScroller);
+    vi.spyOn(scroller, 'getScrollPosition').mockReturnValue([0, 640]);
+    const scrollTo = vi.spyOn(scroller, 'scrollToPosition').mockImplementation(() => undefined);
+    await open('/orders?status=paid');
+    expectList().flush(orderPage([5, 4], 'c1'));
+    await settle();
+
+    await harness.navigateByUrl('/orders/5?status=paid');
+    await harness.navigateByUrl('/orders?status=cancelled');
+    expectList().flush(orderPage([8], null));
+    await settle();
+
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 });

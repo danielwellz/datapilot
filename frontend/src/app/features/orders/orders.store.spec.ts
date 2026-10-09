@@ -213,4 +213,17 @@ describe('OrdersStore', () => {
     http.expectNone(ORDERS_URL);
     expect(store.status()).toBe('idle');
   });
+
+  it('keeps the scroll position of the rows it shows, and forgets it with new filters', () => {
+    showFirstPage(PAID, [5, 4]);
+    store.saveScroll([0, 640]);
+    store.applyFilters({ ...PAID });
+    expect(store.takeSavedScroll()).toEqual([0, 640]);
+    expect(store.takeSavedScroll()).toBeNull();
+
+    store.saveScroll([0, 640]);
+    store.applyFilters(GERMANY);
+    expectList().flush(orderPage([9], null));
+    expect(store.takeSavedScroll()).toBeNull();
+  });
 });

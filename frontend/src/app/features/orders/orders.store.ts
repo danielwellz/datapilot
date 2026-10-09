@@ -46,6 +46,8 @@ interface OrdersState {
 export class OrdersStore {
   private readonly api = inject(OrdersApi);
   private readonly requests = new Subject<PageRequest>();
+  /** Where the list was scrolled when its page was left, while those rows are still shown. */
+  private savedScroll: readonly [number, number] | null = null;
   private readonly state = signal<OrdersState>({
     filters: NO_FILTERS,
     items: [],
@@ -100,7 +102,22 @@ export class OrdersStore {
     }
   }
 
+  /** Remembers where the list is scrolled, so a return to the same rows can resume there. */
+  saveScroll(position: readonly [number, number]): void {
+    this.savedScroll = position;
+  }
+
+  /** The saved position, once: null when a new list has loaded since. */
+  takeSavedScroll(): readonly [number, number] | null {
+    const position = this.savedScroll;
+    this.savedScroll = null;
+    return position;
+  }
+
   private request(request: PageRequest): void {
+    if (request.cursor === null) {
+      this.savedScroll = null;
+    }
     this.state.update((state) => ({
       ...state,
       filters: request.filters,
