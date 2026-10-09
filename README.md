@@ -27,6 +27,7 @@ Run `make help` to list every target.
 The Angular app runs at <http://localhost:4200>. Its dev server forwards `/api` to the API on port 5001, so the browser sees one origin, as it will in production. Log in with the demo account below or create an account.
 
 - **Design:** [docs/design.md](docs/design.md) holds the brief, the color, type, spacing and radius tokens with their contrast ratios, and the shell layout. Every token is a CSS custom property in `frontend/src/styles/_tokens.scss`, with light and dark values. The app follows the system theme until you pick one.
+- **Dashboard:** key numbers for 7, 30 or 90 days with their change against the previous period, monthly revenue with a 3-month average, the top customers by country, the top products by category, and retention by signup month as a heatmap. All panels load in parallel; the charts below the fold render when they scroll into view. Every chart can also be read as a table.
 - **Sessions:** the access token lives only in memory. The refresh token is an httpOnly cookie that the app never reads ([ADR 0003](docs/adr/0003-authentication-tokens.md)). A reload restores the session with one refresh call before the first page renders. When a request gets a 401, the app refreshes once, however many requests failed at the same moment, retries them, and sends you to log in only if the server rejects the refresh token.
 - **Checks:** `make fe-lint` (ESLint and Prettier), `make fe-test` (Vitest, with coverage) and `make fe-build`.
 
