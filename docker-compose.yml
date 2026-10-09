@@ -24,6 +24,10 @@ services:
 
   redis:
     image: redis:7-alpine
+    # Bounded memory: bench runs and parameter combinations leave cache
+    # entries behind until their TTL. Every cache entry and token has a TTL,
+    # so volatile-lru evicts among them; the data version key has none.
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
     ports:
       - "6379:6379"
     volumes:
