@@ -7,7 +7,7 @@
 # the final image copies; uv itself and the build caches stay behind.
 FROM ghcr.io/astral-sh/uv:0.12.15 AS uv
 
-FROM public.ecr.aws/docker/library/python:3.12.15-slim-trixie AS dependencies
+FROM public.ecr.aws/docker/library/python:3.15.0-slim-trixie AS dependencies
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --no-install-project
 
 # --- Runtime ----------------------------------------------------------------
-FROM public.ecr.aws/docker/library/python:3.12.15-slim-trixie AS runtime
+FROM public.ecr.aws/docker/library/python:3.15.0-slim-trixie AS runtime
 
 RUN groupadd --system --gid 10001 datapilot \
     && useradd --system --uid 10001 --gid datapilot --no-create-home \
