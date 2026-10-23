@@ -3,7 +3,7 @@
 # image would be one more anonymous pull from Docker Hub.
 
 # --- Build ------------------------------------------------------------------
-FROM public.ecr.aws/docker/library/node:24.21.0-alpine AS build
+FROM public.ecr.aws/docker/library/node:26.12.1-alpine AS build
 ENV NG_CLI_ANALYTICS=false
 WORKDIR /build
 COPY package.json package-lock.json ./
